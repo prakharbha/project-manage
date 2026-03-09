@@ -7,14 +7,30 @@ export async function POST(req: Request) {
         const session = await getSession();
         if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-        const { projectId, name, description, isPriority } = await req.json();
+        const { projectId, clientId, name, description, isPriority } = await req.json();
 
-        if (!projectId || !name) {
-            return NextResponse.json({ error: 'Project and Name are required' }, { status: 400 });
+        if (!name || (!projectId && !clientId)) {
+            return NextResponse.json({ error: 'Name and either Project ID or Client ID are required' }, { status: 400 });
+        }
+
+        let resolvedProjectId = projectId;
+
+        // If a clientId was passed (like from the Admin's CreateTaskModal direct-client select flow)
+        if (!projectId && clientId) {
+            const clientProjects = await prisma.project.findMany({
+                where: { clientId },
+                orderBy: { createdAt: 'asc' }, // usually the "General" default project created first
+                take: 1
+            });
+
+            if (clientProjects.length === 0) {
+                return NextResponse.json({ error: 'This client has no active projects to assign a task to' }, { status: 400 });
+            }
+            resolvedProjectId = clientProjects[0].id;
         }
 
         // Validate project exists and user has access
-        const project = await prisma.project.findUnique({ where: { id: projectId } });
+        const project = await prisma.project.findUnique({ where: { id: resolvedProjectId } });
         if (!project) return NextResponse.json({ error: 'Project not found' }, { status: 404 });
 
         if (session.role === 'CLIENT' && project.clientId !== session.userId) {
@@ -23,7 +39,7 @@ export async function POST(req: Request) {
 
         const task = await prisma.task.create({
             data: {
-                projectId,
+                projectId: resolvedProjectId,
                 name,
                 description,
                 isPriority: Boolean(isPriority),
