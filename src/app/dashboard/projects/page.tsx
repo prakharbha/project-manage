@@ -35,15 +35,12 @@ export default async function ClientProjectsPage() {
                         {session.role === 'ADMIN' ? 'Manage and create projects for clients.' : 'View your active projects, tasks, and hours.'}
                     </p>
                 </div>
-                <button className="bg-brand-900 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-brand-950 transition-colors shadow-sm">
-                    + New Project
-                </button>
+                <CreateTaskModalWrapper isAdmin={session.role === 'ADMIN'} />
             </div>
 
             <div className="flex-1">
                 <ClientProjectList projects={projects} />
             </div>
-            <CreateTaskModalWrapper isAdmin={session.role === 'ADMIN'} />
         </div>
     );
 }
