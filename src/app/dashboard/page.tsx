@@ -2,6 +2,8 @@ import { getSession } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import prisma from '@/lib/db';
 import { Activity, MessageSquare, Briefcase, PlusCircle, CheckCircle2 } from 'lucide-react';
+import { ClientTaskCards } from '@/components/dashboard/client/ClientTaskCards';
+import { CreateTaskModalWrapper } from '@/components/dashboard/modals/CreateTaskModalWrapper';
 
 // Date formatter
 function timeAgo(date: Date) {
@@ -39,11 +41,11 @@ export default async function DashboardRootStore() {
             ? prisma.task.aggregate({ _sum: { billingHours: true } })
             : prisma.user.findUnique({ where: { id: session.userId }, select: { advanceHours: true, billedHours: true } }),
 
-        // Activity Feed Queries
+        // Activity Feed & Task Queries
         prisma.task.findMany({
-            where: isAdmin ? undefined : { project: { clientId: session.userId } },
+            where: isAdmin ? undefined : { project: { clientId: session.userId }, status: { not: 'COMPLETED' } },
             orderBy: { createdAt: 'desc' },
-            take: 5,
+            take: isAdmin ? 5 : 20, // Fetch more for the client card grid
             include: { project: { select: { name: true } } }
         }),
         prisma.comment.findMany({
@@ -133,51 +135,65 @@ export default async function DashboardRootStore() {
                 ))}
             </div>
 
-            <div className="glass-panel rounded-xl p-6 border border-border shadow-sm">
-                <div className="flex items-center gap-2 mb-6">
-                    <Activity className="text-brand-500" size={20} />
-                    <h2 className="text-lg font-semibold text-brand-900">Recent Activity</h2>
+            {isAdmin ? (
+                <div className="glass-panel rounded-xl p-6 border border-border shadow-sm">
+                    <div className="flex items-center gap-2 mb-6">
+                        <Activity className="text-brand-500" size={20} />
+                        <h2 className="text-lg font-semibold text-brand-900">Recent Activity</h2>
+                    </div>
+
+                    {activities.length === 0 ? (
+                        <div className="h-40 flex flex-col items-center justify-center text-brand-400">
+                            <p className="text-sm italic">No recent activity detected.</p>
+                        </div>
+                    ) : (
+                        <div className="space-y-6 relative before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-border before:to-transparent">
+                            {activities.map((activity) => {
+                                let Icon = PlusCircle;
+                                let iconBg = 'bg-brand-100 text-brand-600';
+
+                                if (activity.type === 'comment') {
+                                    Icon = MessageSquare;
+                                    iconBg = 'bg-accent/10 text-accent';
+                                } else if (activity.type === 'project') {
+                                    Icon = Briefcase;
+                                    iconBg = 'bg-success/10 text-success-dark';
+                                }
+
+                                return (
+                                    <div key={activity.id} className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
+                                        <div className="flex items-center justify-center w-10 h-10 rounded-full border-4 border-white bg-white shadow shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 z-10">
+                                            <div className={`w-full h-full rounded-full flex items-center justify-center ${iconBg}`}>
+                                                <Icon size={16} />
+                                            </div>
+                                        </div>
+
+                                        <div className="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] bg-white p-4 rounded-xl border border-border shadow-sm hover:shadow-md transition-shadow">
+                                            <div className="flex items-center justify-between mb-1">
+                                                <h4 className="font-semibold text-brand-900 text-sm">{activity.title}</h4>
+                                                <span className="text-xs text-brand-500 font-medium">{timeAgo(activity.timestamp)}</span>
+                                            </div>
+                                            <p className="text-sm text-brand-600 truncate">{activity.subtitle}</p>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
                 </div>
-
-                {activities.length === 0 ? (
-                    <div className="h-40 flex flex-col items-center justify-center text-brand-400">
-                        <p className="text-sm italic">No recent activity detected.</p>
+            ) : (
+                <div className="glass-panel rounded-xl p-6 border border-border shadow-sm">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                        <div className="flex items-center gap-2">
+                            <CheckCircle2 className="text-brand-500" size={20} />
+                            <h2 className="text-lg font-semibold text-brand-900">Your Open Tasks</h2>
+                        </div>
+                        <CreateTaskModalWrapper isAdmin={false} />
                     </div>
-                ) : (
-                    <div className="space-y-6 relative before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-border before:to-transparent">
-                        {activities.map((activity) => {
-                            let Icon = PlusCircle;
-                            let iconBg = 'bg-brand-100 text-brand-600';
 
-                            if (activity.type === 'comment') {
-                                Icon = MessageSquare;
-                                iconBg = 'bg-accent/10 text-accent';
-                            } else if (activity.type === 'project') {
-                                Icon = Briefcase;
-                                iconBg = 'bg-success/10 text-success-dark';
-                            }
-
-                            return (
-                                <div key={activity.id} className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
-                                    <div className="flex items-center justify-center w-10 h-10 rounded-full border-4 border-white bg-white shadow shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 z-10">
-                                        <div className={`w-full h-full rounded-full flex items-center justify-center ${iconBg}`}>
-                                            <Icon size={16} />
-                                        </div>
-                                    </div>
-
-                                    <div className="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] bg-white p-4 rounded-xl border border-border shadow-sm hover:shadow-md transition-shadow">
-                                        <div className="flex items-center justify-between mb-1">
-                                            <h4 className="font-semibold text-brand-900 text-sm">{activity.title}</h4>
-                                            <span className="text-xs text-brand-500 font-medium">{timeAgo(activity.timestamp)}</span>
-                                        </div>
-                                        <p className="text-sm text-brand-600 truncate">{activity.subtitle}</p>
-                                    </div>
-                                </div>
-                            );
-                        })}
-                    </div>
-                )}
-            </div>
+                    <ClientTaskCards tasks={recentTasks} />
+                </div>
+            )}
         </div>
     );
 }
