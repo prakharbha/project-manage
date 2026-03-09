@@ -1,25 +1,12 @@
 import { getSession } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import prisma from '@/lib/db';
-import { Activity, MessageSquare, Briefcase, PlusCircle, CheckCircle2 } from 'lucide-react';
+import { CheckCircle2 } from 'lucide-react';
 import { ClientTaskCards } from '@/components/dashboard/client/ClientTaskCards';
 import { CreateTaskModalWrapper } from '@/components/dashboard/modals/CreateTaskModalWrapper';
+import { AdminTaskCards } from '@/components/dashboard/admin/AdminTaskCards';
 
-// Date formatter
-function timeAgo(date: Date) {
-    const seconds = Math.floor((new Date().getTime() - date.getTime()) / 1000);
-    let interval = seconds / 31536000;
-    if (interval > 1) return Math.floor(interval) + " years ago";
-    interval = seconds / 2592000;
-    if (interval > 1) return Math.floor(interval) + " months ago";
-    interval = seconds / 86400;
-    if (interval > 1) return Math.floor(interval) + " days ago";
-    interval = seconds / 3600;
-    if (interval > 1) return Math.floor(interval) + " hours ago";
-    interval = seconds / 60;
-    if (interval > 1) return Math.floor(interval) + " minutes ago";
-    return "just now";
-}
+// Date formatter removed. Not needed anywhere else.
 
 export default async function DashboardRootStore() {
     const session = await getSession();
@@ -45,7 +32,7 @@ export default async function DashboardRootStore() {
         prisma.task.findMany({
             where: isAdmin ? undefined : { project: { clientId: session.userId }, status: { not: 'COMPLETED' } },
             orderBy: { createdAt: 'desc' },
-            take: isAdmin ? 5 : 20, // Fetch more for the client card grid
+            take: 20, // Increased to support proper grid for both Admin & Client
             include: {
                 project: {
                     select: {
@@ -72,35 +59,8 @@ export default async function DashboardRootStore() {
         })
     ]);
 
-    // Unified Activity Array Assembly
-    const activities = [
-        ...recentTasks.map(t => ({
-            id: `task-${t.id}`,
-            type: 'task',
-            title: `Task Created: ${t.name}`,
-            subtitle: `In project: ${t.project.name}`,
-            timestamp: t.createdAt,
-            status: t.status
-        })),
-        ...recentComments.map(c => ({
-            id: `comment-${c.id}`,
-            type: 'comment',
-            title: `${c.user.name || 'A user'} commented on ${c.task.name}`,
-            subtitle: `"${c.content.length > 50 ? c.content.substring(0, 50) + '...' : c.content}"`,
-            timestamp: c.createdAt,
-            status: 'neutral'
-        })),
-        ...recentProjects.map(p => ({
-            id: `project-${p.id}`,
-            type: 'project',
-            title: `New Project Started: ${p.name}`,
-            subtitle: `Status: ${p.status}`,
-            timestamp: p.createdAt,
-            status: 'success'
-        }))
-    ]
-        .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
-        .slice(0, 8);
+    // Clean up generic Feed code since Admin also uses Cards now.
+    // Commented out activity assembler block and date formatter since they're no longer needed on this file entirely.
 
     let primaryBillingMetric = { label: 'Hours Billed', value: '0h', color: 'border-success text-success' };
     let secondaryBillingMetric = { label: 'Overdue Tasks', value: '0', color: 'border-danger text-danger' };
@@ -148,49 +108,15 @@ export default async function DashboardRootStore() {
 
             {isAdmin ? (
                 <div className="glass-panel rounded-xl p-6 border border-border shadow-sm">
-                    <div className="flex items-center gap-2 mb-6">
-                        <Activity className="text-brand-500" size={20} />
-                        <h2 className="text-lg font-semibold text-brand-900">Recent Activity</h2>
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                        <div className="flex items-center gap-2">
+                            <CheckCircle2 className="text-brand-500" size={20} />
+                            <h2 className="text-lg font-semibold text-brand-900">Task Overview</h2>
+                        </div>
+                        <CreateTaskModalWrapper isAdmin={true} />
                     </div>
 
-                    {activities.length === 0 ? (
-                        <div className="h-40 flex flex-col items-center justify-center text-brand-400">
-                            <p className="text-sm italic">No recent activity detected.</p>
-                        </div>
-                    ) : (
-                        <div className="space-y-6 relative before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-border before:to-transparent">
-                            {activities.map((activity) => {
-                                let Icon = PlusCircle;
-                                let iconBg = 'bg-brand-100 text-brand-600';
-
-                                if (activity.type === 'comment') {
-                                    Icon = MessageSquare;
-                                    iconBg = 'bg-accent/10 text-accent';
-                                } else if (activity.type === 'project') {
-                                    Icon = Briefcase;
-                                    iconBg = 'bg-success/10 text-success-dark';
-                                }
-
-                                return (
-                                    <div key={activity.id} className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
-                                        <div className="flex items-center justify-center w-10 h-10 rounded-full border-4 border-white bg-white shadow shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 z-10">
-                                            <div className={`w-full h-full rounded-full flex items-center justify-center ${iconBg}`}>
-                                                <Icon size={16} />
-                                            </div>
-                                        </div>
-
-                                        <div className="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] bg-white p-4 rounded-xl border border-border shadow-sm hover:shadow-md transition-shadow">
-                                            <div className="flex items-center justify-between mb-1">
-                                                <h4 className="font-semibold text-brand-900 text-sm">{activity.title}</h4>
-                                                <span className="text-xs text-brand-500 font-medium">{timeAgo(activity.timestamp)}</span>
-                                            </div>
-                                            <p className="text-sm text-brand-600 truncate">{activity.subtitle}</p>
-                                        </div>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    )}
+                    <AdminTaskCards tasks={recentTasks} />
                 </div>
             ) : (
                 <div className="glass-panel rounded-xl p-6 border border-border shadow-sm">
