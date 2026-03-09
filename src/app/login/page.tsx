@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { Loader2 } from 'lucide-react';
 
@@ -82,7 +83,7 @@ export default function LoginPage() {
                     <div>
                         <div className="flex justify-between items-center mb-1.5">
                             <label className="block text-sm font-medium text-brand-700" htmlFor="password">Password</label>
-                            <a href="#" className="text-xs text-accent hover:text-accent-dark transition-colors">Forgot password?</a>
+                            <Link href="/forgot-password" className="text-xs text-accent hover:text-accent-dark transition-colors">Forgot password?</Link>
                         </div>
                         <input
                             id="password"
