@@ -38,9 +38,34 @@ export async function POST(req: Request, context: { params: Promise<{ id: string
             include: { user: { select: { name: true, role: true, companyName: true } } }
         });
 
+        const isClient = session.role === 'CLIENT';
+
+        // Trigger App Notifications
+        if (isClient) {
+            const admins = await prisma.user.findMany({ where: { role: 'ADMIN' }, select: { id: true } });
+            if (admins.length > 0) {
+                await prisma.notification.createMany({
+                    data: admins.map(admin => ({
+                        userId: admin.id,
+                        type: 'COMMENT_ADDED',
+                        message: `New comment on ${task.name} from ${task.project.client.companyName}`,
+                        link: '/dashboard/tasks'
+                    }))
+                });
+            }
+        } else {
+            await prisma.notification.create({
+                data: {
+                    userId: task.project.clientId,
+                    type: 'COMMENT_ADDED',
+                    message: `Nandann left a comment on ${task.name}`,
+                    link: '/dashboard'
+                }
+            });
+        }
+
         if (resend) {
             try {
-                const isClient = session.role === 'CLIENT';
                 const toEmail = isClient ? 'admin@nandann.com' : task.project.client.email;
                 const senderName = isClient ? (task.project.client.companyName || 'Client') : 'Nandann Admin';
 

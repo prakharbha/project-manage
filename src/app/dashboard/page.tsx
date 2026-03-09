@@ -46,7 +46,18 @@ export default async function DashboardRootStore() {
             where: isAdmin ? undefined : { project: { clientId: session.userId }, status: { not: 'COMPLETED' } },
             orderBy: { createdAt: 'desc' },
             take: isAdmin ? 5 : 20, // Fetch more for the client card grid
-            include: { project: { select: { name: true } } }
+            include: {
+                project: {
+                    select: {
+                        name: true,
+                        clientId: true,
+                        client: { select: { companyName: true } }
+                    }
+                },
+                comments: {
+                    include: { user: { select: { id: true, name: true, role: true } } }
+                }
+            }
         }),
         prisma.comment.findMany({
             where: isAdmin ? undefined : { task: { project: { clientId: session.userId } } },

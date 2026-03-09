@@ -31,6 +31,30 @@ export async function POST(req: Request) {
             }
         });
 
+        // Trigger Real Notifications
+        if (session.role === 'CLIENT') {
+            const admins = await prisma.user.findMany({ where: { role: 'ADMIN' }, select: { id: true } });
+            if (admins.length > 0) {
+                await prisma.notification.createMany({
+                    data: admins.map(admin => ({
+                        userId: admin.id,
+                        type: 'TASK_CREATED',
+                        message: `New task from client: ${name}`,
+                        link: '/dashboard/tasks'
+                    }))
+                });
+            }
+        } else {
+            await prisma.notification.create({
+                data: {
+                    userId: project.clientId,
+                    type: 'TASK_CREATED',
+                    message: `New task assigned: ${name}`,
+                    link: '/dashboard'
+                }
+            });
+        }
+
         // TODO: Send email notification if needed
 
         return NextResponse.json(task, { status: 201 });
