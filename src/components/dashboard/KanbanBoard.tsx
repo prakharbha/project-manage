@@ -95,7 +95,7 @@ function KanbanCard({ task, isDragging, onDragStart, onClick }: { task: any, isD
         <motion.div
             layoutId={task.id}
             draggable
-            onDragStart={onDragStart}
+            onDragStart={(e: any) => onDragStart(e)}
             onClick={onClick}
             onDragEnd={(e) => e.preventDefault()}
             whileHover={{ scale: 1.02 }}
