@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import { getSession } from '@/lib/auth';
-import { LogOut, LayoutDashboard, CheckSquare, Settings, Bell } from 'lucide-react';
+import { LogOut, LayoutDashboard, CheckSquare, Settings } from 'lucide-react';
+import { NotificationDropdown } from '@/components/dashboard/NotificationDropdown';
 
 export default async function DashboardLayout({
     children,
@@ -60,10 +61,7 @@ export default async function DashboardLayout({
                         {isAdmin ? 'Admin Overview' : 'Project Overview'}
                     </h1>
                     <div className="flex items-center gap-4">
-                        <button className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-brand-100 transition-colors text-brand-600 relative">
-                            <Bell size={20} />
-                            <span className="absolute top-2.5 right-2.5 w-2 h-2 rounded-full bg-accent"></span>
-                        </button>
+                        <NotificationDropdown />
                     </div>
                 </header>
 
