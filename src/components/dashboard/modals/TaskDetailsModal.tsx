@@ -142,125 +142,121 @@ export function TaskDetailsModal({
                         {/* Content Scrollable Area */}
                         <div className="flex-1 overflow-y-auto p-6 space-y-8 kanban-scroll">
 
-                            {/* Description & Edits */}
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                <div className="md:col-span-2 space-y-4">
-                                    <div>
-                                        <h4 className="text-xs font-bold uppercase tracking-wider text-brand-400 mb-2">Description</h4>
-                                        <div className="bg-brand-50 p-4 rounded-lg text-sm text-brand-800 whitespace-pre-wrap border border-brand-100/50">
-                                            {task.description || <span className="text-brand-400 italic">No description provided.</span>}
-                                        </div>
-                                    </div>
+                            {/* Description */}
+                            <div>
+                                <h4 className="text-xs font-bold uppercase tracking-wider text-brand-400 mb-2">Description</h4>
+                                <div className="bg-brand-50 p-4 rounded-lg text-sm text-brand-800 whitespace-pre-wrap border border-brand-100/50">
+                                    {task.description || <span className="text-brand-400 italic">No description provided.</span>}
                                 </div>
+                            </div>
 
-                                {/* Metadata Panel */}
-                                <div className="space-y-4 bg-white border border-border rounded-xl p-4 shadow-sm h-fit">
-                                    <h4 className="text-xs font-bold uppercase tracking-wider text-brand-400 mb-3 border-b pb-2">Task Details</h4>
+                            {/* Metadata Panel */}
+                            <div className="space-y-4 bg-white border border-border rounded-xl p-4 shadow-sm">
+                                <h4 className="text-xs font-bold uppercase tracking-wider text-brand-400 mb-3 border-b pb-2">Task Details</h4>
 
-                                    <div className="flex-1 w-full bg-brand-50/50 p-4 border border-border rounded-xl">
-                                        <div className="flex items-center justify-between mb-3 border-b border-border pb-2">
-                                            <label className="flex items-center gap-2 text-xs font-bold text-brand-700 uppercase tracking-wider">
-                                                <Clock size={14} /> Itemized Billing
-                                            </label>
-                                            {isAdmin && (
-                                                <button
-                                                    onClick={handleAddBillingItem}
-                                                    className="flex items-center gap-1 text-[11px] font-semibold bg-brand-900 text-white px-2 py-1 rounded transition-colors hover:bg-brand-950 shadow-sm active:scale-95"
-                                                >
-                                                    <Plus size={12} /> Add Row
-                                                </button>
-                                            )}
+                                <div className="flex-1 w-full bg-brand-50/50 p-4 border border-border rounded-xl">
+                                    <div className="flex items-center justify-between mb-3 border-b border-border pb-2">
+                                        <label className="flex items-center gap-2 text-xs font-bold text-brand-700 uppercase tracking-wider">
+                                            <Clock size={14} /> Itemized Billing
+                                        </label>
+                                        {isAdmin && (
+                                            <button
+                                                onClick={handleAddBillingItem}
+                                                className="flex items-center gap-1 text-[11px] font-semibold bg-brand-900 text-white px-2 py-1 rounded transition-colors hover:bg-brand-950 shadow-sm active:scale-95"
+                                            >
+                                                <Plus size={12} /> Add Row
+                                            </button>
+                                        )}
+                                    </div>
+
+                                    {billingItems.length === 0 ? (
+                                        <div className="text-xs text-brand-400 italic text-center py-4 bg-white border border-dashed rounded-lg">
+                                            No time logged yet.
                                         </div>
-
-                                        {billingItems.length === 0 ? (
-                                            <div className="text-xs text-brand-400 italic text-center py-4 bg-white border border-dashed rounded-lg">
-                                                No time logged yet.
-                                            </div>
-                                        ) : (
-                                            <div className="space-y-2 mb-4 max-h-[200px] overflow-y-auto pr-2 custom-scrollbar">
-                                                {billingItems.map((item, index) => (
-                                                    <div key={item.id} className="flex items-start gap-2 bg-white p-2 rounded-lg border border-border shadow-sm group">
-                                                        <div className="flex-1 space-y-2">
-                                                            {isAdmin ? (
-                                                                <>
+                                    ) : (
+                                        <div className="space-y-2 mb-4 max-h-[200px] overflow-y-auto pr-2 custom-scrollbar">
+                                            {billingItems.map((item, index) => (
+                                                <div key={item.id} className="flex items-start gap-2 bg-white p-2 rounded-lg border border-border shadow-sm group">
+                                                    <div className="flex-1 space-y-2">
+                                                        {isAdmin ? (
+                                                            <>
+                                                                <input
+                                                                    type="text"
+                                                                    placeholder="Description of work..."
+                                                                    value={item.description}
+                                                                    onChange={(e) => handleUpdateBillingItem(item.id, 'description', e.target.value)}
+                                                                    className="w-full text-xs px-2 py-1.5 border rounded bg-brand-50/30 focus:bg-white focus:ring-1 focus:ring-accent outline-none font-medium text-brand-900"
+                                                                />
+                                                                <div className="flex items-center gap-2">
+                                                                    <span className="text-[10px] font-semibold text-brand-400 uppercase">Hours:</span>
                                                                     <input
-                                                                        type="text"
-                                                                        placeholder="Description of work..."
-                                                                        value={item.description}
-                                                                        onChange={(e) => handleUpdateBillingItem(item.id, 'description', e.target.value)}
-                                                                        className="w-full text-xs px-2 py-1.5 border rounded bg-brand-50/30 focus:bg-white focus:ring-1 focus:ring-accent outline-none font-medium text-brand-900"
+                                                                        type="number"
+                                                                        step="0.5"
+                                                                        min="0"
+                                                                        value={item.hours}
+                                                                        onChange={(e) => handleUpdateBillingItem(item.id, 'hours', parseFloat(e.target.value) || 0)}
+                                                                        className="w-20 text-xs px-2 py-1 border rounded bg-brand-50/30 focus:bg-white focus:ring-1 focus:ring-accent outline-none font-semibold text-brand-900"
                                                                     />
-                                                                    <div className="flex items-center gap-2">
-                                                                        <span className="text-[10px] font-semibold text-brand-400 uppercase">Hours:</span>
-                                                                        <input
-                                                                            type="number"
-                                                                            step="0.5"
-                                                                            min="0"
-                                                                            value={item.hours}
-                                                                            onChange={(e) => handleUpdateBillingItem(item.id, 'hours', parseFloat(e.target.value) || 0)}
-                                                                            className="w-20 text-xs px-2 py-1 border rounded bg-brand-50/30 focus:bg-white focus:ring-1 focus:ring-accent outline-none font-semibold text-brand-900"
-                                                                        />
-                                                                    </div>
-                                                                </>
-                                                            ) : (
-                                                                <div className="flex justify-between items-center w-full">
-                                                                    <div className="flex-1 text-xs text-brand-800 font-medium break-words pr-4">
-                                                                        {item.description || <span className="text-brand-400 italic">No description</span>}
-                                                                    </div>
-                                                                    <div className="text-xs font-bold text-brand-900 bg-brand-50 px-2 py-1 rounded shrink-0">
-                                                                        {item.hours}h
-                                                                    </div>
                                                                 </div>
-                                                            )}
-                                                        </div>
-                                                        {isAdmin && (
-                                                            <button
-                                                                onClick={() => handleRemoveBillingItem(item.id)}
-                                                                className="text-danger-dark/50 hover:text-danger hover:bg-danger/10 p-1.5 rounded transition-all"
-                                                                title="Remove Item"
-                                                            >
-                                                                <Trash2 size={14} />
-                                                            </button>
+                                                            </>
+                                                        ) : (
+                                                            <div className="flex justify-between items-center w-full">
+                                                                <div className="flex-1 text-xs text-brand-800 font-medium break-words pr-4">
+                                                                    {item.description || <span className="text-brand-400 italic">No description</span>}
+                                                                </div>
+                                                                <div className="text-xs font-bold text-brand-900 bg-brand-50 px-2 py-1 rounded shrink-0">
+                                                                    {item.hours}h
+                                                                </div>
+                                                            </div>
                                                         )}
                                                     </div>
-                                                ))}
-                                            </div>
-                                        )}
-
-                                        <div className="flex items-center justify-between border-t border-border pt-3 mt-auto">
-                                            <span className="text-xs font-bold text-brand-600 uppercase tracking-wider">Total</span>
-                                            <span className="text-sm font-black text-brand-900">{totalHours} <span className="text-brand-500 font-semibold text-xs">hours</span></span>
+                                                    {isAdmin && (
+                                                        <button
+                                                            onClick={() => handleRemoveBillingItem(item.id)}
+                                                            className="text-danger-dark/50 hover:text-danger hover:bg-danger/10 p-1.5 rounded transition-all"
+                                                            title="Remove Item"
+                                                        >
+                                                            <Trash2 size={14} />
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            ))}
                                         </div>
-                                    </div>
+                                    )}
 
-                                    <div>
-                                        <label className="flex items-center gap-2 text-xs font-medium text-brand-600 mb-1">
-                                            <AlertCircle size={14} /> ETA Date
-                                        </label>
-                                        {isAdmin ? (
-                                            <input
-                                                type="date"
-                                                value={eta}
-                                                onChange={(e) => setEta(e.target.value)}
-                                                className="w-full text-sm px-3 py-1.5 border rounded-md focus:ring-1 focus:ring-accent outline-none"
-                                            />
-                                        ) : (
-                                            <p className="font-semibold text-brand-900 text-sm bg-brand-50 px-3 py-1.5 rounded-md border">
-                                                {task.eta ? new Date(task.eta).toLocaleDateString() : 'TBD'}
-                                            </p>
-                                        )}
+                                    <div className="flex items-center justify-between border-t border-border pt-3 mt-auto">
+                                        <span className="text-xs font-bold text-brand-600 uppercase tracking-wider">Total</span>
+                                        <span className="text-sm font-black text-brand-900">{totalHours} <span className="text-brand-500 font-semibold text-xs">hours</span></span>
                                     </div>
+                                </div>
 
-                                    {isAdmin && (
-                                        <button
-                                            onClick={handleSaveEdits}
-                                            disabled={isUpdatingTask}
-                                            className="w-full mt-4 bg-brand-100 hover:bg-brand-200 text-brand-800 text-xs font-semibold py-2 rounded-md transition-colors flex justify-center items-center"
-                                        >
-                                            {isUpdatingTask ? <Loader2 size={14} className="animate-spin" /> : 'Save Details'}
-                                        </button>
+                                <div>
+                                    <label className="flex items-center gap-2 text-xs font-medium text-brand-600 mb-1">
+                                        <AlertCircle size={14} /> ETA Date
+                                    </label>
+                                    {isAdmin ? (
+                                        <input
+                                            type="date"
+                                            value={eta}
+                                            onChange={(e) => setEta(e.target.value)}
+                                            className="w-full text-sm px-3 py-1.5 border rounded-md focus:ring-1 focus:ring-accent outline-none"
+                                        />
+                                    ) : (
+                                        <p className="font-semibold text-brand-900 text-sm bg-brand-50 px-3 py-1.5 rounded-md border">
+                                            {task.eta ? new Date(task.eta).toLocaleDateString() : 'TBD'}
+                                        </p>
                                     )}
                                 </div>
+
+                                {isAdmin && (
+                                    <button
+                                        onClick={handleSaveEdits}
+                                        disabled={isUpdatingTask}
+                                        className="w-full mt-4 bg-brand-100 hover:bg-brand-200 text-brand-800 text-xs font-semibold py-2 rounded-md transition-colors flex justify-center items-center"
+                                    >
+                                        {isUpdatingTask ? <Loader2 size={14} className="animate-spin" /> : 'Save Details'}
+                                    </button>
+                                )}
                             </div>
 
                             {/* Comments Section */}
