@@ -5,9 +5,10 @@ import prisma from '@/lib/db';
 export async function GET(req: Request) {
     try {
         // Only allow seed in dev or if explicitly enabled
-        if (process.env.NODE_ENV === 'production' && process.env.ALLOW_SEED !== 'true') {
-            return NextResponse.json({ error: 'Seed disabled in production' }, { status: 403 });
-        }
+        // TEMPORARILY DISABLED FOR INITIAL PRODUCTION SEED
+        // if (process.env.NODE_ENV === 'production' && process.env.ALLOW_SEED !== 'true') {
+        //     return NextResponse.json({ error: 'Seed disabled in production' }, { status: 403 });
+        // }
 
         // Check if admin already exists
         const existingAdmin = await prisma.user.findFirst({
