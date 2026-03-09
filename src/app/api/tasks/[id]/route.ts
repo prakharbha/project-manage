@@ -11,7 +11,7 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
         const taskId = params.id;
 
         const body = await req.json();
-        const { status, billingHours, eta, isPriority } = body;
+        const { status, billingHours, billingItems, eta, isPriority } = body;
 
         // Verify task exists and authorization
         const task = await prisma.task.findUnique({
@@ -29,7 +29,22 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
 
         if (session.role === 'ADMIN') {
             if (status !== undefined) dataToUpdate.status = status;
-            if (billingHours !== undefined) dataToUpdate.billingHours = Number(billingHours);
+
+            // Allow explicit billingHours override, or auto-calc based on items provided
+            if (billingItems !== undefined) {
+                dataToUpdate.billingItems = billingItems;
+                if (!billingHours) {
+                    const calculatedHours = Array.isArray(billingItems)
+                        ? billingItems.reduce((acc: number, item: any) => acc + (Number(item.hours) || 0), 0)
+                        : 0;
+                    dataToUpdate.billingHours = calculatedHours;
+                } else {
+                    dataToUpdate.billingHours = Number(billingHours);
+                }
+            } else if (billingHours !== undefined) {
+                dataToUpdate.billingHours = Number(billingHours);
+            }
+
             if (eta !== undefined) dataToUpdate.eta = eta ? new Date(eta) : null;
             if (isPriority !== undefined) dataToUpdate.isPriority = Boolean(isPriority);
         } else {
