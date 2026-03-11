@@ -86,11 +86,11 @@ export default async function DashboardRootStore() {
             {/* Metrics Row */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 {[
-                    { label: isAdmin ? 'Total Clients' : 'Company Status', value: isAdmin ? `${activeClients}` : 'Active', color: 'border-brand-500 text-brand-700' },
+                    isAdmin ? { label: 'Total Clients', value: `${activeClients}`, color: 'border-brand-500 text-brand-700' } : null,
                     { label: isAdmin ? 'Total Pending Tasks' : 'Our Open Tasks', value: `${openTasks}`, color: 'border-accent text-accent-dark' },
                     primaryBillingMetric,
                     secondaryBillingMetric,
-                ].map((metric, idx) => (
+                ].filter(Boolean).map((metric: any, idx) => (
                     <div key={idx} className={`glass-panel p-6 rounded-xl border-l-4 ${metric.color} flex flex-col justify-between shadow-sm hover:shadow-md transition-shadow`}>
                         <p className="text-sm font-medium text-brand-500 mb-2">{metric.label}</p>
                         <h3 className="text-3xl font-bold">{metric.value}</h3>
