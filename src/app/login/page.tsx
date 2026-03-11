@@ -53,8 +53,11 @@ export default function LoginPage() {
                 className="glass-panel p-8 sm:p-10 rounded-2xl w-full max-w-md flex flex-col z-10 mx-4 border border-white/60"
             >
                 <div className="flex flex-col items-center mb-8">
-                    <div className="relative w-48 h-16 sm:w-56 sm:h-20 mb-2">
-                        <Image src="/nandann-logo.png" alt="Nandann OS Logo" fill className="object-contain" priority />
+                    <div className="flex items-center gap-3">
+                        <div className="relative w-48 h-16 sm:w-56 sm:h-20 mb-2">
+                            <Image src="/nandann-logo.png" alt="Nandann Logo" fill className="object-contain" priority />
+                        </div>
+                        <span className="font-bold text-3xl sm:text-4xl tracking-tight text-brand-900 mt-1">OS<span className="text-accent">.</span></span>
                     </div>
                     <p className="text-brand-500 text-sm text-center">Manage your tasks seamlessly</p>
                 </div>
@@ -105,7 +108,7 @@ export default function LoginPage() {
                         {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Log In'}
                     </button>
                 </form>
-            </motion.div>
-        </div>
+            </motion.div >
+        </div >
     );
 }

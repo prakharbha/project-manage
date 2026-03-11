@@ -22,8 +22,11 @@ export default async function DashboardLayout({
             {/* Sidebar Navigation */}
             <aside className="w-full md:w-64 bg-white border-r border-border flex flex-col pt-6 z-10 shadow-sm relative">
                 <div className="px-6 mb-8 flex items-center justify-between md:justify-start">
-                    <div className="relative w-36 h-12 flex-shrink-0">
-                        <Image src="/nandann-logo.png" alt="Nandann Logo" fill className="object-contain" priority />
+                    <div className="flex items-center gap-2">
+                        <div className="relative w-36 h-12 flex-shrink-0">
+                            <Image src="/nandann-logo.png" alt="Nandann Logo" fill className="object-contain" priority />
+                        </div>
+                        <span className="font-bold text-2xl tracking-tight text-brand-900 mt-1">OS<span className="text-accent">.</span></span>
                     </div>
                 </div>
 
@@ -81,7 +84,7 @@ function NavItem({ href, icon, active, label }: { href: string, icon: React.Reac
     return (
         <a
             href={href}
-            className={`flex items - center gap - 3 px - 3 py - 2.5 rounded - lg text - sm font - medium transition - all duration - 200 ${active ? 'bg-accent text-white shadow-sm' : 'text-brand-600 hover:bg-brand-100 hover:text-brand-900'} `}
+            className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${active ? 'bg-accent text-white shadow-sm' : 'text-brand-600 hover:bg-brand-100 hover:text-brand-900'}`}
         >
             {icon}
             <span>{label}</span>
