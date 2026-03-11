@@ -13,13 +13,12 @@ interface CreateTaskModalProps {
 
 export function CreateTaskModal({ isOpen, onClose, isAdmin }: CreateTaskModalProps) {
     const router = useRouter();
-    const [projects, setProjects] = useState<any[]>([]);
+    const [clients, setClients] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
     const [formData, setFormData] = useState({
-        projectId: '',
         clientId: '',
         name: '',
         description: '',
@@ -27,16 +26,15 @@ export function CreateTaskModal({ isOpen, onClose, isAdmin }: CreateTaskModalPro
     });
 
     useEffect(() => {
-        if (isOpen) {
+        if (isOpen && isAdmin) {
             setIsLoading(true);
-            const endpoint = isAdmin ? '/api/clients' : '/api/projects';
-            fetch(endpoint)
+            fetch('/api/clients')
                 .then(res => res.json())
                 .then(data => {
                     if (Array.isArray(data)) {
-                        setProjects(data); // Using same projects array state to hold generic lists
+                        setClients(data);
                         if (data.length > 0) {
-                            if (isAdmin) setFormData(prev => ({ ...prev, clientId: data[0].id }));
+                            setFormData(prev => ({ ...prev, clientId: data[0].id }));
                         }
                     }
                 })
@@ -63,7 +61,7 @@ export function CreateTaskModal({ isOpen, onClose, isAdmin }: CreateTaskModalPro
 
             router.refresh(); // Tell Next.js Server Components to re-fetch
             onClose();
-            setFormData({ projectId: '', clientId: isAdmin ? (projects[0]?.id || '') : '', name: '', description: '', isPriority: false });
+            setFormData({ clientId: isAdmin ? (clients[0]?.id || '') : '', name: '', description: '', isPriority: false });
         } catch (err: any) {
             setError(err.message);
         } finally {
@@ -119,9 +117,9 @@ export function CreateTaskModal({ isOpen, onClose, isAdmin }: CreateTaskModalPro
                                                 className="w-full px-4 py-2 bg-white border border-border rounded-lg outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent transition-all text-sm text-brand-900"
                                             >
                                                 <option value="" disabled>Select a client</option>
-                                                {projects.map((p) => (
-                                                    <option key={p.id} value={p.id}>
-                                                        {p.companyName || p.name}
+                                                {clients.map((c) => (
+                                                    <option key={c.id} value={c.id}>
+                                                        {c.companyName || c.name}
                                                     </option>
                                                 ))}
                                             </select>

@@ -7,18 +7,19 @@ import { CreateTaskModalWrapper } from '@/components/dashboard/modals/CreateTask
 export default async function AllTasksPage() {
     const session = await getSession();
 
-    if (!session || session.role !== 'ADMIN') {
+    if (!session) {
         redirect('/dashboard');
     }
 
-    // Fetch all tasks with project and client info
+    const isAdmin = session.role === 'ADMIN';
+
+    // Fetch tasks based on role
     const tasks = await prisma.task.findMany({
+        where: isAdmin ? undefined : {
+            clientId: session.userId
+        },
         include: {
-            project: {
-                include: {
-                    client: true
-                }
-            },
+            client: true,
             comments: true,
         },
         orderBy: { createdAt: 'desc' }
@@ -29,14 +30,16 @@ export default async function AllTasksPage() {
             <div className="flex justify-between items-center bg-white p-4 rounded-xl border border-border shadow-sm">
                 <div>
                     <h2 className="text-xl font-bold text-brand-900">Task Management</h2>
-                    <p className="text-sm text-brand-500">Drag and drop tasks to update their status across all client projects.</p>
+                    <p className="text-sm text-brand-500">
+                        {isAdmin ? 'Drag and drop tasks to update their status across all client projects.' : 'View the status of your company\'s tasks.'}
+                    </p>
                 </div>
-                <CreateTaskModalWrapper isAdmin={true} />
+                <CreateTaskModalWrapper isAdmin={isAdmin} />
             </div>
 
             <div className="flex-1 overflow-x-auto overflow-y-hidden kanban-scroll min-h-[600px]">
                 {/* Pass raw data down to the interactive client component */}
-                <KanbanBoard initialTasks={tasks} />
+                <KanbanBoard initialTasks={tasks} isAdmin={isAdmin} />
             </div>
         </div>
     );

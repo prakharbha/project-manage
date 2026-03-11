@@ -7,55 +7,32 @@ export async function POST(req: Request) {
         const session = await getSession();
         if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-        const { projectId, clientId, name, description, isPriority } = await req.json();
+        const { clientId, name, description, isPriority } = await req.json();
 
         if (!name) {
             return NextResponse.json({ error: 'Name is required' }, { status: 400 });
         }
 
-        let resolvedProjectId = projectId;
+        let resolvedClientId = clientId;
 
-        // If client is creating a task, auto-assign to their default project
+        // If client is creating a task, auto-assign to themselves
         if (session.role === 'CLIENT') {
-            const clientProjects = await prisma.project.findMany({
-                where: { clientId: session.userId },
-                orderBy: { createdAt: 'asc' },
-                take: 1
-            });
-            if (clientProjects.length === 0) {
-                return NextResponse.json({ error: 'You have no active projects to assign a task to' }, { status: 400 });
-            }
-            resolvedProjectId = clientProjects[0].id;
-        }
-        // If Admin is selecting a client explicitly from dropdown
-        else if (session.role === 'ADMIN' && clientId) {
-            const clientProjects = await prisma.project.findMany({
-                where: { clientId },
-                orderBy: { createdAt: 'asc' },
-                take: 1
-            });
-
-            if (clientProjects.length === 0) {
-                return NextResponse.json({ error: 'This client has no active projects to assign a task to' }, { status: 400 });
-            }
-            resolvedProjectId = clientProjects[0].id;
+            resolvedClientId = session.userId;
         }
 
-        if (!resolvedProjectId) {
-            return NextResponse.json({ error: 'A Project ID or Client ID is required for Admins' }, { status: 400 });
+        if (!resolvedClientId) {
+            return NextResponse.json({ error: 'A Client ID is required for Admins' }, { status: 400 });
         }
 
-        // Validate project exists and user has access
-        const project = await prisma.project.findUnique({ where: { id: resolvedProjectId } });
-        if (!project) return NextResponse.json({ error: 'Project not found' }, { status: 404 });
-
-        if (session.role === 'CLIENT' && project.clientId !== session.userId) {
-            return NextResponse.json({ error: 'Unauthorized for this project' }, { status: 403 });
+        // Validate client exists if Admin is assigning
+        if (session.role === 'ADMIN') {
+            const targetClient = await prisma.user.findUnique({ where: { id: resolvedClientId, role: 'CLIENT' } });
+            if (!targetClient) return NextResponse.json({ error: 'Client not found' }, { status: 404 });
         }
 
         const task = await prisma.task.create({
             data: {
-                projectId: resolvedProjectId,
+                clientId: resolvedClientId,
                 name,
                 description,
                 isPriority: Boolean(isPriority),
@@ -79,7 +56,7 @@ export async function POST(req: Request) {
         } else {
             await prisma.notification.create({
                 data: {
-                    userId: project.clientId,
+                    userId: resolvedClientId,
                     type: 'TASK_CREATED',
                     message: `New task assigned: ${name}`,
                     link: '/dashboard'

@@ -43,19 +43,10 @@ export async function GET(req: Request) {
             }
         });
 
-        // Create a Project for Client
-        const project = await prisma.project.create({
-            data: {
-                name: 'Website Redesign',
-                clientId: client.id,
-                status: 'ACTIVE'
-            }
-        });
-
         // Create Tasks
         await prisma.task.create({
             data: {
-                projectId: project.id,
+                clientId: client.id,
                 name: 'Design Mockups',
                 status: 'COMPLETED',
                 billingHours: 2
@@ -64,7 +55,7 @@ export async function GET(req: Request) {
 
         await prisma.task.create({
             data: {
-                projectId: project.id,
+                clientId: client.id,
                 name: 'Develop Navigation',
                 status: 'IN_PROGRESS',
                 isPriority: true,

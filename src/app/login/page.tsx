@@ -56,7 +56,7 @@ export default function LoginPage() {
                         <span className="bg-brand-900 text-white px-3 py-1 rounded-md text-sm font-medium tracking-widest uppercase mb-1">Nandann</span>
                         <span>Dashboard<span className="text-accent">.</span></span>
                     </div>
-                    <p className="text-brand-500 text-sm text-center">Manage your projects seamlessly</p>
+                    <p className="text-brand-500 text-sm text-center">Manage your tasks seamlessly</p>
                 </div>
 
                 <form onSubmit={handleLogin} className="space-y-5">

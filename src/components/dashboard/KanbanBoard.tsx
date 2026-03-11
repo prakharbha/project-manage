@@ -13,7 +13,7 @@ const COLUMNS = [
     { id: 'COMPLETED', label: 'Completed', color: 'bg-kanban-completed border-green-200' }
 ];
 
-export function KanbanBoard({ initialTasks }: { initialTasks: any[] }) {
+export function KanbanBoard({ initialTasks, isAdmin }: { initialTasks: any[], isAdmin: boolean }) {
     const [tasks, setTasks] = useState(initialTasks);
     const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null);
     const [selectedTask, setSelectedTask] = useState<any | null>(null);
@@ -25,11 +25,13 @@ export function KanbanBoard({ initialTasks }: { initialTasks: any[] }) {
     };
 
     const handleDragOver = (e: React.DragEvent) => {
+        if (!isAdmin) return;
         e.preventDefault();
         e.dataTransfer.dropEffect = "move";
     };
 
     const handleDrop = async (e: React.DragEvent, statusId: string) => {
+        if (!isAdmin) return;
         e.preventDefault();
         if (!draggedTaskId) return;
 
@@ -71,6 +73,7 @@ export function KanbanBoard({ initialTasks }: { initialTasks: any[] }) {
                             <KanbanCard
                                 key={task.id}
                                 task={task}
+                                isAdmin={isAdmin}
                                 isDragging={draggedTaskId === task.id}
                                 onDragStart={(e) => handleDragStart(e, task.id)}
                                 onClick={() => setSelectedTask(task)}
@@ -84,27 +87,30 @@ export function KanbanBoard({ initialTasks }: { initialTasks: any[] }) {
                 task={selectedTask}
                 isOpen={!!selectedTask}
                 onClose={() => setSelectedTask(null)}
-                isAdmin={true}
+                isAdmin={isAdmin}
             />
         </div>
     );
 }
 
-function KanbanCard({ task, isDragging, onDragStart, onClick }: { task: any, isDragging: boolean, onDragStart: (e: React.DragEvent) => void, onClick: () => void }) {
+function KanbanCard({ task, isAdmin, isDragging, onDragStart, onClick }: { task: any, isAdmin: boolean, isDragging: boolean, onDragStart: (e: React.DragEvent) => void, onClick: () => void }) {
     return (
         <motion.div
             layoutId={task.id}
-            draggable
-            onDragStart={(e: any) => onDragStart(e)}
+            draggable={isAdmin}
+            onDragStart={(e: any) => isAdmin && onDragStart(e)}
             onClick={onClick}
             onDragEnd={(e) => e.preventDefault()}
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
-            className={`bg-white border p-4 rounded-lg cursor-grab active:cursor-grabbing shadow-sm hover:shadow-md transition-shadow ${isDragging ? 'opacity-40 border-dashed border-brand-400 border-2 shadow-none' : 'border-border'} ${task.isPriority ? 'border-l-4 border-l-warning' : ''}`}
+            className={`bg-white border p-4 rounded-lg shadow-sm hover:shadow-md transition-shadow 
+                ${isAdmin ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'} 
+                ${isDragging ? 'opacity-40 border-dashed border-brand-400 border-2 shadow-none' : 'border-border'} 
+                ${task.isPriority ? 'border-l-4 border-l-warning' : ''}`}
         >
             <div className="flex justify-between items-start mb-2">
                 <span className="text-xs font-medium text-brand-500 uppercase tracking-wider truncate mr-2">
-                    {task.project.client.companyName}
+                    {task.client.companyName}
                 </span>
                 {task.isPriority && (
                     <span className="text-[10px] bg-warning/20 text-warning-dark font-bold px-1.5 py-0.5 rounded flex-shrink-0">
@@ -114,9 +120,6 @@ function KanbanCard({ task, isDragging, onDragStart, onClick }: { task: any, isD
             </div>
 
             <h4 className="font-semibold text-brand-900 text-sm mb-1 leading-snug">{task.name}</h4>
-            <p className="text-xs text-brand-500 line-clamp-2 mb-3 leading-relaxed">
-                {task.project.name}
-            </p>
 
             <div className="flex justify-between items-center text-xs text-brand-400 mt-2 border-t pt-2 border-border/50">
                 <div className="flex items-center gap-1">

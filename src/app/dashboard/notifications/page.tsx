@@ -36,7 +36,7 @@ export default async function NotificationsPage() {
                     </div>
                     <div>
                         <h2 className="text-xl font-bold text-brand-900">Your Notifications</h2>
-                        <p className="text-sm text-brand-500">Stay up to date with tasks and project activities.</p>
+                        <p className="text-sm text-brand-500">Stay up to date with tasks and account activities.</p>
                     </div>
                 </div>
             </div>

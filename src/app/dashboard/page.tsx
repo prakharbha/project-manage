@@ -17,12 +17,10 @@ export default async function DashboardRootStore() {
 
     const isAdmin = session.role === 'ADMIN';
 
-    const [activeProjects, openTasks, billableData, recentTasks, recentComments, recentProjects] = await Promise.all([
-        prisma.project.count({
-            where: isAdmin ? { status: 'ACTIVE' } : { clientId: session.userId, status: 'ACTIVE' }
-        }),
+    const [activeClients, openTasks, billableData, recentTasks, recentComments] = await Promise.all([
+        isAdmin ? prisma.user.count({ where: { role: 'CLIENT' } }) : Promise.resolve(0),
         prisma.task.count({
-            where: isAdmin ? { status: { not: 'COMPLETED' } } : { project: { clientId: session.userId }, status: { not: 'COMPLETED' } }
+            where: isAdmin ? { status: { not: 'COMPLETED' } } : { clientId: session.userId, status: { not: 'COMPLETED' } }
         }),
         isAdmin
             ? prisma.task.aggregate({ _sum: { billingHours: true } })
@@ -30,15 +28,14 @@ export default async function DashboardRootStore() {
 
         // Activity Feed & Task Queries
         prisma.task.findMany({
-            where: isAdmin ? undefined : { project: { clientId: session.userId }, status: { not: 'COMPLETED' } },
+            where: isAdmin ? undefined : { clientId: session.userId, status: { not: 'COMPLETED' } },
             orderBy: { createdAt: 'desc' },
             take: 20, // Increased to support proper grid for both Admin & Client
             include: {
-                project: {
+                client: {
                     select: {
-                        name: true,
-                        clientId: true,
-                        client: { select: { companyName: true } }
+                        companyName: true,
+                        name: true
                     }
                 },
                 comments: {
@@ -47,15 +44,10 @@ export default async function DashboardRootStore() {
             }
         }),
         prisma.comment.findMany({
-            where: isAdmin ? undefined : { task: { project: { clientId: session.userId } } },
+            where: isAdmin ? undefined : { task: { clientId: session.userId } },
             orderBy: { createdAt: 'desc' },
             take: 5,
             include: { user: { select: { name: true } }, task: { select: { name: true } } }
-        }),
-        prisma.project.findMany({
-            where: isAdmin ? undefined : { clientId: session.userId },
-            orderBy: { createdAt: 'desc' },
-            take: 5
         })
     ]);
 
@@ -83,7 +75,7 @@ export default async function DashboardRootStore() {
             primaryBillingMetric.color = 'border-danger text-danger';
         }
 
-        const priorityCount = await prisma.task.count({ where: { project: { clientId: session.userId }, status: { not: 'COMPLETED' }, isPriority: true } });
+        const priorityCount = await prisma.task.count({ where: { clientId: session.userId, status: { not: 'COMPLETED' }, isPriority: true } });
         secondaryBillingMetric.label = 'Priority Tasks';
         secondaryBillingMetric.value = `${priorityCount}`;
         secondaryBillingMetric.color = 'border-warning text-warning';
@@ -94,7 +86,7 @@ export default async function DashboardRootStore() {
             {/* Metrics Row */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 {[
-                    { label: 'Active Projects', value: `${activeProjects}`, color: 'border-brand-500 text-brand-700' },
+                    { label: isAdmin ? 'Total Clients' : 'Company Status', value: isAdmin ? `${activeClients}` : 'Active', color: 'border-brand-500 text-brand-700' },
                     { label: isAdmin ? 'Total Pending Tasks' : 'Our Open Tasks', value: `${openTasks}`, color: 'border-accent text-accent-dark' },
                     primaryBillingMetric,
                     secondaryBillingMetric,

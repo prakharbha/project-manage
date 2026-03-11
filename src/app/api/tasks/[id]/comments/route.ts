@@ -18,14 +18,12 @@ export async function POST(req: Request, context: { params: Promise<{ id: string
 
         const task = await prisma.task.findUnique({
             where: { id: taskId },
-            include: {
-                project: { include: { client: true } }
-            }
+            include: { client: true }
         });
 
         if (!task) return NextResponse.json({ error: 'Task not found' }, { status: 404 });
 
-        if (session.role === 'CLIENT' && task.project.clientId !== session.userId) {
+        if (session.role === 'CLIENT' && task.clientId !== session.userId) {
             return NextResponse.json({ error: 'Unauthorized to comment on this task' }, { status: 403 });
         }
 
@@ -48,26 +46,28 @@ export async function POST(req: Request, context: { params: Promise<{ id: string
                     data: admins.map(admin => ({
                         userId: admin.id,
                         type: 'COMMENT_ADDED',
-                        message: `New comment on ${task.name} from ${task.project.client.companyName}`,
-                        link: '/dashboard/tasks'
+                        message: `New comment on ${task.name} from ${task.client.companyName}`,
+                        link: `/dashboard/tasks?taskId=${task.id}`
                     }))
                 });
             }
         } else {
-            await prisma.notification.create({
-                data: {
-                    userId: task.project.clientId,
-                    type: 'COMMENT_ADDED',
-                    message: `Nandann left a comment on ${task.name}`,
-                    link: '/dashboard'
-                }
-            });
+            if (task.clientId !== session.userId) { // Only notify client if they are not the one commenting
+                await prisma.notification.create({
+                    data: {
+                        userId: task.clientId,
+                        type: 'COMMENT_ADDED',
+                        message: `Nandann Admin replied to ${task.name}`,
+                        link: `/dashboard/tasks?taskId=${task.id}`
+                    }
+                });
+            }
         }
 
         if (resend) {
             try {
-                const toEmail = isClient ? 'admin@nandann.com' : task.project.client.email;
-                const senderName = isClient ? (task.project.client.companyName || 'Client') : 'Nandann Admin';
+                const toEmail = isClient ? 'admin@nandann.com' : task.client.email;
+                const senderName = isClient ? (task.client.companyName || 'Client') : 'Nandann Admin';
 
                 await resend.emails.send({
                     from: 'Nandann OS <notifications@nandann.com>',

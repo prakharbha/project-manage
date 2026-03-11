@@ -46,13 +46,7 @@ export async function POST(req: Request) {
                 companyName,
                 email,
                 passwordHash: hashedPassword,
-                role: 'CLIENT',
-                // Auto-create a default project so Admins can immediately assign tasks
-                projects: {
-                    create: [
-                        { name: 'General Board', status: 'ACTIVE' }
-                    ]
-                }
+                role: 'CLIENT'
             }
         });
 

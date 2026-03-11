@@ -137,7 +137,7 @@ export function TaskDetailsModal({
                             <div>
                                 <div className="flex items-center gap-2 mb-2">
                                     <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-brand-200 text-brand-800 tracking-wide uppercase">
-                                        {task.project.client.companyName}
+                                        {task.client?.companyName || task.client?.name || 'Client'}
                                     </span>
                                     {task.isPriority && (
                                         <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-warning/20 text-warning-dark">
@@ -149,7 +149,7 @@ export function TaskDetailsModal({
                                     </span>
                                 </div>
                                 <h2 className="text-xl font-bold text-brand-900 leading-tight">{task.name}</h2>
-                                <p className="text-sm text-brand-500 mt-1">{task.project.name}</p>
+                                <p className="text-sm text-brand-500 mt-1">{task.client?.companyName}</p>
                             </div>
                             <button onClick={onClose} className="p-1.5 bg-white border border-border rounded-full hover:bg-brand-50 text-brand-500 transition-colors">
                                 <X size={20} />
@@ -287,7 +287,7 @@ export function TaskDetailsModal({
                                         <p className="text-sm text-brand-400 text-center py-4 border border-dashed rounded-lg bg-brand-50/50">No comments yet. Start the conversation!</p>
                                     ) : (
                                         displayComments.map((comment: any, idx: number) => {
-                                            const isMyComment = (isAdmin && comment.user?.role === 'ADMIN') || (!isAdmin && comment.user?.id === task.project.clientId);
+                                            const isMyComment = (isAdmin && comment.user?.role === 'ADMIN') || (!isAdmin && comment.user?.id === task.clientId);
 
                                             return (
                                                 <div key={comment.id || idx} className={`flex flex-col ${isMyComment ? 'items-end' : 'items-start'}`}>

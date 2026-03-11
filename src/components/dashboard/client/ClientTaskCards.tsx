@@ -84,8 +84,8 @@ export function ClientTaskCards({ tasks }: { tasks: any[] }) {
                                     {getStatusText(task.status)}
                                 </div>
                                 <h3 className="font-semibold text-brand-900 line-clamp-2 pr-10">{task.name}</h3>
-                                {task.project && (
-                                    <p className="text-xs text-brand-500 mt-1 line-clamp-1">Project: {task.project.name}</p>
+                                {task.client && (
+                                    <p className="text-xs text-brand-500 mt-1 line-clamp-1">{task.client.companyName}</p>
                                 )}
                             </div>
 

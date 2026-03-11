@@ -84,15 +84,15 @@ export function AdminTaskCards({ tasks }: { tasks: any[] }) {
                                     {getStatusText(task.status)}
                                 </div>
                                 <h3 className="font-semibold text-brand-900 line-clamp-2 pr-10">{task.name}</h3>
-                                {task.project && (
-                                    <p className="text-xs text-brand-500 mt-1 line-clamp-1 font-medium">{task.project.name}</p>
+                                {task.client && (
+                                    <p className="text-xs text-brand-500 mt-1 line-clamp-1 font-medium">{task.client.companyName}</p>
                                 )}
                             </div>
 
                             <div className="flex flex-col gap-2 mt-4 border-t border-black/5 pt-3">
                                 <div className="flex items-center gap-1.5 text-xs font-semibold text-brand-700 w-full truncate">
                                     <Building size={12} className="text-brand-400 shrink-0" />
-                                    <span className="truncate">{task.project?.client?.companyName || 'Unknown Client'}</span>
+                                    <span className="truncate">{task.client?.companyName || task.client?.name || 'Unknown Client'}</span>
                                 </div>
                                 <div className="flex items-center justify-between text-[11px] font-medium text-brand-600">
                                     <div className="flex items-center gap-1 bg-white/60 px-2 py-0.5 rounded backdrop-blur-sm">
