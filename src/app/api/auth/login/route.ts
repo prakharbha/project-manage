@@ -20,7 +20,8 @@ export async function POST(req: Request) {
         const token = signToken({
             userId: user.id,
             role: user.role,
-            companyName: user.companyName
+            companyName: user.companyName,
+            name: user.name || ''
         });
 
         await setSession(token);

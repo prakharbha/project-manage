@@ -7,6 +7,7 @@ export interface TokenPayload {
     userId: string;
     role: 'ADMIN' | 'CLIENT';
     companyName: string | null;
+    name: string;
 }
 
 export function signToken(payload: TokenPayload): string {

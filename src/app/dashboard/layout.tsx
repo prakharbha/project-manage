@@ -41,10 +41,10 @@ export default async function DashboardLayout({
                         </div>
                         <div className="flex-1 min-w-0">
                             <p className="text-sm font-bold text-brand-900 truncate">
-                                {isAdmin ? 'Administrator' : session.companyName}
+                                {session.name || 'User'}
                             </p>
                             <p className="text-[11px] uppercase tracking-wider font-semibold text-brand-500 truncate mt-0.5">
-                                {isAdmin ? 'Nandann Internal' : 'Client Portal'}
+                                {isAdmin ? 'Nandann Internal' : session.companyName}
                             </p>
                         </div>
                     </div>
