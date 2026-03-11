@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { Loader2 } from 'lucide-react';
 
@@ -52,9 +53,8 @@ export default function LoginPage() {
                 className="glass-panel p-8 sm:p-10 rounded-2xl w-full max-w-md flex flex-col z-10 mx-4 border border-white/60"
             >
                 <div className="flex flex-col items-center mb-8">
-                    <div className="font-bold text-3xl tracking-tight text-brand-900 mb-2 flex flex-col items-center gap-2">
-                        <span className="bg-brand-900 text-white px-3 py-1 rounded-md text-sm font-medium tracking-widest uppercase mb-1">Nandann</span>
-                        <span>Dashboard<span className="text-accent">.</span></span>
+                    <div className="relative w-48 h-16 sm:w-56 sm:h-20 mb-2">
+                        <Image src="/nandann-logo.png" alt="Nandann OS Logo" fill className="object-contain" priority />
                     </div>
                     <p className="text-brand-500 text-sm text-center">Manage your tasks seamlessly</p>
                 </div>
