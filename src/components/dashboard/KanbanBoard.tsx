@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { TaskDetailsModal } from '@/components/dashboard/modals/TaskDetailsModal';
+import { useRouter } from 'next/navigation';
 
 // Defined matching Prisma Enums
 const COLUMNS = [
@@ -14,6 +15,7 @@ const COLUMNS = [
 ];
 
 export function KanbanBoard({ initialTasks, isAdmin }: { initialTasks: any[], isAdmin: boolean }) {
+    const router = useRouter();
     const [tasks, setTasks] = useState(initialTasks);
     const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null);
     const [selectedTask, setSelectedTask] = useState<any | null>(null);
@@ -41,8 +43,18 @@ export function KanbanBoard({ initialTasks, isAdmin }: { initialTasks: any[], is
 
         // Server hook point later
         try {
-            /* await fetch(/api/tasks/status)... */
-        } catch {
+            const res = await fetch(`/api/tasks/${draggedTaskId}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: statusId })
+            });
+
+            if (!res.ok) {
+                throw new Error('Failed to update task status');
+            }
+            router.refresh(); // Ensure the server cache is invalidated so refreshing the page shows the new state
+        } catch (error) {
+            console.error('Failed to update task status:', error);
             // Revert on fail
             setTasks(previousTasks);
         }
