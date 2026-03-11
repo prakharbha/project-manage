@@ -33,20 +33,22 @@ export default async function DashboardLayout({
                     {isAdmin && <NavItem href="/dashboard/clients" icon={<Settings size={20} />} label="Clients" />}
                 </nav>
 
-                <div className="p-4 border-t border-border bg-brand-50/50">
-                    <div className="flex items-center gap-3 px-2 py-2 mb-2 rounded-lg truncate">
-                        <div className="w-8 h-8 rounded-full bg-accent/10 border border-accent/20 flex items-center justify-center text-accent font-semibold flex-shrink-0">
+                <div className="p-4 mt-auto">
+                    <div className="bg-white border border-border/60 shadow-sm rounded-xl p-3 mb-3 flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-accent/10 border border-accent/20 flex items-center justify-center text-accent font-bold text-lg flex-shrink-0 shadow-inner">
                             {isAdmin ? 'A' : session.companyName?.[0] || 'C'}
                         </div>
                         <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-brand-900 truncate">
+                            <p className="text-sm font-bold text-brand-900 truncate">
                                 {isAdmin ? 'Administrator' : session.companyName}
                             </p>
-                            <p className="text-xs text-brand-500 truncate">{isAdmin ? 'Nandann Internal' : 'Client Portal'}</p>
+                            <p className="text-[11px] uppercase tracking-wider font-semibold text-brand-500 truncate mt-0.5">
+                                {isAdmin ? 'Nandann Internal' : 'Client Portal'}
+                            </p>
                         </div>
                     </div>
                     <form action="/api/auth/logout" method="POST">
-                        <button type="submit" className="w-full flex flex-row items-center gap-2 px-3 py-2 text-sm text-brand-600 hover:text-danger hover:bg-danger/10 rounded-md transition-colors font-medium">
+                        <button type="submit" className="w-full flex flex-row items-center justify-center gap-2 px-3 py-2 text-sm text-brand-600 hover:text-danger-dark hover:bg-danger/10 border border-transparent hover:border-danger/20 rounded-lg transition-all font-semibold">
                             <LogOut size={16} /> <span>Sign Out</span>
                         </button>
                     </form>
