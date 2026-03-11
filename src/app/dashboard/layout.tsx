@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import { getSession } from '@/lib/auth';
 import Image from 'next/image';
+import Link from 'next/link';
 import { LogOut, LayoutDashboard, CheckSquare, Settings, User } from 'lucide-react';
 import { NotificationDropdown } from '@/components/dashboard/NotificationDropdown';
 
@@ -38,19 +39,21 @@ export default async function DashboardLayout({
                 </nav>
 
                 <div className="p-4 mt-auto">
-                    <div className="bg-white border border-border/60 shadow-sm rounded-xl p-3 mb-3 flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-accent/10 border border-accent/20 flex items-center justify-center text-accent font-bold text-lg flex-shrink-0 shadow-inner">
-                            {isAdmin ? 'A' : session.companyName?.[0] || 'C'}
+                    <Link href="/dashboard/settings" className="block mb-3">
+                        <div className="bg-white border border-border/60 shadow-sm rounded-xl p-3 flex items-center gap-3 hover:border-brand-300 hover:shadow-md transition-all cursor-pointer">
+                            <div className="w-10 h-10 rounded-full bg-accent/10 border border-accent/20 flex items-center justify-center text-accent font-bold text-lg flex-shrink-0 shadow-inner">
+                                {isAdmin ? 'A' : session.companyName?.[0] || 'C'}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                                <p className="text-sm font-bold text-brand-900 truncate">
+                                    {session.name || 'User'}
+                                </p>
+                                <p className="text-[11px] uppercase tracking-wider font-semibold text-brand-500 truncate mt-0.5">
+                                    {isAdmin ? 'Nandann Internal' : session.companyName}
+                                </p>
+                            </div>
                         </div>
-                        <div className="flex-1 min-w-0">
-                            <p className="text-sm font-bold text-brand-900 truncate">
-                                {session.name || 'User'}
-                            </p>
-                            <p className="text-[11px] uppercase tracking-wider font-semibold text-brand-500 truncate mt-0.5">
-                                {isAdmin ? 'Nandann Internal' : session.companyName}
-                            </p>
-                        </div>
-                    </div>
+                    </Link>
                     <form action="/api/auth/logout" method="POST">
                         <button type="submit" className="w-full flex flex-row items-center justify-center gap-2 px-3 py-2 text-sm text-brand-600 hover:text-danger-dark hover:bg-danger/10 border border-transparent hover:border-danger/20 rounded-lg transition-all font-semibold">
                             <LogOut size={16} /> <span>Sign Out</span>
