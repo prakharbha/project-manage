@@ -19,7 +19,9 @@ export function TaskDetailsModal({
     const router = useRouter();
     const [commentText, setCommentText] = useState('');
     const [isSubmittingComment, setIsSubmittingComment] = useState(false);
-    const [isUpdatingTask, setIsUpdatingTask] = useState(false);
+    const [isUpdatingBilling, setIsUpdatingBilling] = useState(false);
+    const [isUpdatingEta, setIsUpdatingEta] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
     const [localComments, setLocalComments] = useState<any[]>([]);
 
     // Local state for admin edits
@@ -91,24 +93,61 @@ export function TaskDetailsModal({
         }
     };
 
-    const handleSaveEdits = async () => {
+    const handleSaveBilling = async () => {
         if (!isAdmin) return;
-        setIsUpdatingTask(true);
+        setIsUpdatingBilling(true);
 
         try {
             await fetch(`/api/tasks/${task.id}`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    billingItems, // Send the full array to over-write and auto-calculate sum
-                    eta: eta ? new Date(eta).toISOString() : null,
-                    status: task.status // Include current status to avoid overriding with null
+                    billingItems,
+                    status: task.status
                 }),
             });
             router.refresh();
-            onClose();
         } finally {
-            setIsUpdatingTask(false);
+            setIsUpdatingBilling(false);
+        }
+    };
+
+    const handleSaveEta = async () => {
+        if (!isAdmin) return;
+        setIsUpdatingEta(true);
+
+        try {
+            await fetch(`/api/tasks/${task.id}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    eta: eta ? new Date(eta).toISOString() : null,
+                    status: task.status
+                }),
+            });
+            router.refresh();
+        } finally {
+            setIsUpdatingEta(false);
+        }
+    };
+
+    const handleDeleteTask = async () => {
+        if (!isAdmin || !window.confirm('Are you sure you want to delete this task? This action cannot be undone.')) return;
+        setIsDeleting(true);
+
+        try {
+            const res = await fetch(`/api/tasks/${task.id}`, { method: 'DELETE' });
+            if (res.ok) {
+                router.refresh();
+                onClose();
+            } else {
+                alert('Failed to delete task.');
+            }
+        } catch (error) {
+            console.error('Delete error', error);
+            alert('An error occurred while deleting.');
+        } finally {
+            setIsDeleting(false);
         }
     };
 
@@ -151,9 +190,21 @@ export function TaskDetailsModal({
                                 <h2 className="text-xl font-bold text-brand-900 leading-tight">{task.name}</h2>
                                 <p className="text-sm text-brand-500 mt-1">{task.client?.companyName}</p>
                             </div>
-                            <button onClick={onClose} className="p-1.5 bg-white border border-border rounded-full hover:bg-brand-50 text-brand-500 transition-colors">
-                                <X size={20} />
-                            </button>
+                            <div className="flex items-center gap-2">
+                                {isAdmin && (
+                                    <button
+                                        onClick={handleDeleteTask}
+                                        disabled={isDeleting}
+                                        className="p-1.5 bg-white border border-danger/30 rounded-full hover:bg-danger/10 text-danger-dark transition-colors disabled:opacity-50"
+                                        title="Delete Task"
+                                    >
+                                        {isDeleting ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
+                                    </button>
+                                )}
+                                <button onClick={onClose} className="p-1.5 bg-white border border-border rounded-full hover:bg-brand-50 text-brand-500 transition-colors">
+                                    <X size={20} />
+                                </button>
+                            </div>
                         </div>
 
                         {/* Content Scrollable Area */}
@@ -245,35 +296,44 @@ export function TaskDetailsModal({
                                         <span className="text-xs font-bold text-brand-600 uppercase tracking-wider">Total</span>
                                         <span className="text-sm font-black text-brand-900">{totalHours} <span className="text-brand-500 font-semibold text-xs">hours</span></span>
                                     </div>
+
+                                    {isAdmin && (
+                                        <button
+                                            onClick={handleSaveBilling}
+                                            disabled={isUpdatingBilling}
+                                            className="w-full mt-4 bg-brand-900 hover:bg-brand-950 text-white text-xs font-semibold py-2 rounded-md transition-colors flex justify-center items-center shadow-sm"
+                                        >
+                                            {isUpdatingBilling ? <Loader2 size={14} className="animate-spin" /> : 'Save Logged Hours'}
+                                        </button>
+                                    )}
                                 </div>
 
-                                <div>
-                                    <label className="flex items-center gap-2 text-xs font-medium text-brand-600 mb-1">
+                                <div className="bg-brand-50/50 p-4 border border-border rounded-xl">
+                                    <label className="flex items-center gap-2 text-xs font-bold text-brand-700 uppercase tracking-wider mb-2">
                                         <AlertCircle size={14} /> ETA Date
                                     </label>
                                     {isAdmin ? (
-                                        <input
-                                            type="date"
-                                            value={eta}
-                                            onChange={(e) => setEta(e.target.value)}
-                                            className="w-full text-sm px-3 py-1.5 border rounded-md focus:ring-1 focus:ring-accent outline-none"
-                                        />
+                                        <>
+                                            <input
+                                                type="date"
+                                                value={eta}
+                                                onChange={(e) => setEta(e.target.value)}
+                                                className="w-full text-sm px-3 py-2 border border-border rounded-md focus:ring-1 focus:ring-accent outline-none bg-white font-medium text-brand-900 mb-2"
+                                            />
+                                            <button
+                                                onClick={handleSaveEta}
+                                                disabled={isUpdatingEta}
+                                                className="w-full bg-white hover:bg-brand-50 border border-border text-brand-800 text-xs font-semibold py-2 rounded-md transition-colors flex justify-center items-center shadow-sm"
+                                            >
+                                                {isUpdatingEta ? <Loader2 size={14} className="animate-spin" /> : 'Update ETA'}
+                                            </button>
+                                        </>
                                     ) : (
-                                        <p className="font-semibold text-brand-900 text-sm bg-brand-50 px-3 py-1.5 rounded-md border">
+                                        <p className="font-semibold text-brand-900 text-sm bg-white px-3 py-2 rounded-md border border-border shadow-sm">
                                             {task.eta ? new Date(task.eta).toLocaleDateString() : 'TBD'}
                                         </p>
                                     )}
                                 </div>
-
-                                {isAdmin && (
-                                    <button
-                                        onClick={handleSaveEdits}
-                                        disabled={isUpdatingTask}
-                                        className="w-full mt-4 bg-brand-100 hover:bg-brand-200 text-brand-800 text-xs font-semibold py-2 rounded-md transition-colors flex justify-center items-center"
-                                    >
-                                        {isUpdatingTask ? <Loader2 size={14} className="animate-spin" /> : 'Save Details'}
-                                    </button>
-                                )}
                             </div>
 
                             {/* Comments Section */}

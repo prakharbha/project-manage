@@ -29,7 +29,7 @@ export default async function DashboardLayout({
 
                 <nav className="flex-1 px-4 space-y-1">
                     <NavItem href="/dashboard" icon={<LayoutDashboard size={20} />} active label="Dashboard" />
-                    {isAdmin && <NavItem href="/dashboard/tasks" icon={<CheckSquare size={20} />} label="All Tasks" />}
+                    <NavItem href="/dashboard/tasks" icon={<CheckSquare size={20} />} label={isAdmin ? "All Tasks" : "Company Tasks"} />
                     {isAdmin && <NavItem href="/dashboard/clients" icon={<Settings size={20} />} label="Clients" />}
                 </nav>
 
