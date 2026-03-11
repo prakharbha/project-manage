@@ -17,7 +17,7 @@ export default async function DashboardRootStore() {
 
     const isAdmin = session.role === 'ADMIN';
 
-    const [activeClients, openTasks, billableData, recentTasks, recentComments] = await Promise.all([
+    const [activeClients, openTasks, billableData, recentTasks, recentComments, completedTasks] = await Promise.all([
         isAdmin ? prisma.user.count({ where: { role: 'CLIENT' } }) : Promise.resolve(0),
         prisma.task.count({
             where: isAdmin ? { status: { not: 'COMPLETED' } } : { clientId: session.userId, status: { not: 'COMPLETED' } }
@@ -48,6 +48,15 @@ export default async function DashboardRootStore() {
             orderBy: { createdAt: 'desc' },
             take: 5,
             include: { user: { select: { name: true } }, task: { select: { name: true } } }
+        }),
+        isAdmin ? Promise.resolve([]) : prisma.task.findMany({
+            where: { clientId: session.userId, status: 'COMPLETED' },
+            orderBy: { updatedAt: 'desc' },
+            take: 10,
+            include: {
+                client: { select: { companyName: true, name: true } },
+                comments: { include: { user: { select: { id: true, name: true, role: true } } } }
+            }
         })
     ]);
 
@@ -111,16 +120,33 @@ export default async function DashboardRootStore() {
                     <AdminTaskCards tasks={recentTasks} />
                 </div>
             ) : (
-                <div className="glass-panel rounded-xl p-6 border border-border shadow-sm">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-                        <div className="flex items-center gap-2">
-                            <CheckCircle2 className="text-brand-500" size={20} />
-                            <h2 className="text-lg font-semibold text-brand-900">Your Open Tasks</h2>
+                <div className="flex flex-col gap-6">
+                    <div className="glass-panel rounded-xl p-6 border border-border shadow-sm">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                            <div className="flex items-center gap-2">
+                                <CheckCircle2 className="text-brand-500" size={20} />
+                                <h2 className="text-lg font-semibold text-brand-900">Your Open Tasks</h2>
+                            </div>
+                            <CreateTaskModalWrapper isAdmin={false} />
                         </div>
-                        <CreateTaskModalWrapper isAdmin={false} />
+
+                        <ClientTaskCards tasks={recentTasks} />
                     </div>
 
-                    <ClientTaskCards tasks={recentTasks} />
+                    <div className="glass-panel rounded-xl p-6 border border-border shadow-sm">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                            <div className="flex items-center gap-2">
+                                <CheckCircle2 className="text-brand-500" size={20} />
+                                <h2 className="text-lg font-semibold text-brand-900">Completed Tasks</h2>
+                            </div>
+                        </div>
+
+                        {completedTasks.length > 0 ? (
+                            <ClientTaskCards tasks={completedTasks} />
+                        ) : (
+                            <div className="text-sm text-brand-500 text-center italic py-4">No completed tasks yet.</div>
+                        )}
+                    </div>
                 </div>
             )}
         </div>
