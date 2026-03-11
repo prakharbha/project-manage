@@ -23,7 +23,7 @@ export async function GET(req: Request) {
         // Create Admin
         const admin = await prisma.user.create({
             data: {
-                email: 'admin@nandann.com',
+                email: 'prakhar@nandann.com',
                 passwordHash,
                 name: 'Admin User',
                 role: 'ADMIN',
@@ -63,7 +63,7 @@ export async function GET(req: Request) {
             }
         });
 
-        return NextResponse.json({ success: true, message: 'Database seeded successfully', accounts: { admin: 'admin@nandann.com', client: 'client@example.com', password: 'password123' } });
+        return NextResponse.json({ success: true, message: 'Database seeded successfully', accounts: { admin: 'prakhar@nandann.com', client: 'client@example.com', password: 'password123' } });
 
     } catch (error) {
         console.error('Seed error', error);

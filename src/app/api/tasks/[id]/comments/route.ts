@@ -66,7 +66,7 @@ export async function POST(req: Request, context: { params: Promise<{ id: string
 
         if (resend) {
             try {
-                const toEmail = isClient ? 'admin@nandann.com' : task.client.email;
+                const toEmail = isClient ? 'prakhar@nandann.com' : task.client.email;
                 const senderName = isClient ? (task.client.companyName || 'Client') : 'Nandann Admin';
 
                 await resend.emails.send({
