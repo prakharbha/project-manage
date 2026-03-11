@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
 import { getSession } from '@/lib/auth';
-import { LogOut, LayoutDashboard, CheckSquare, Settings } from 'lucide-react';
+import { LogOut, LayoutDashboard, CheckSquare, Settings, User } from 'lucide-react';
 import { NotificationDropdown } from '@/components/dashboard/NotificationDropdown';
 
 export default async function DashboardLayout({
@@ -31,6 +31,7 @@ export default async function DashboardLayout({
                     <NavItem href="/dashboard" icon={<LayoutDashboard size={20} />} active label="Dashboard" />
                     <NavItem href="/dashboard/tasks" icon={<CheckSquare size={20} />} label={isAdmin ? "All Tasks" : "Company Tasks"} />
                     {isAdmin && <NavItem href="/dashboard/clients" icon={<Settings size={20} />} label="Clients" />}
+                    <NavItem href="/dashboard/settings" icon={<User size={20} />} label="Profile Settings" />
                 </nav>
 
                 <div className="p-4 mt-auto">
