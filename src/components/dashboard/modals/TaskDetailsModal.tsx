@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Send, Clock, AlertCircle, Loader2, Plus, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -23,10 +23,27 @@ export function TaskDetailsModal({
     const [localComments, setLocalComments] = useState<any[]>([]);
 
     // Local state for admin edits
-    const [billingItems, setBillingItems] = useState<{ id: string, description: string, hours: number }[]>(
-        Array.isArray(task?.billingItems) ? task.billingItems : []
-    );
-    const [eta, setEta] = useState(task?.eta ? new Date(task.eta).toISOString().split('T')[0] : '');
+    const [billingItems, setBillingItems] = useState<{ id: string, description: string, hours: number }[]>([]);
+    const [eta, setEta] = useState('');
+
+    // Sync when task changes (important because modal doesn't unmount in the list views, just opens/closes)
+    useEffect(() => {
+        if (task) {
+            let parsed = [];
+            if (Array.isArray(task.billingItems)) {
+                parsed = task.billingItems;
+            } else if (typeof task.billingItems === 'string') {
+                try {
+                    parsed = JSON.parse(task.billingItems);
+                    if (!Array.isArray(parsed)) parsed = [];
+                } catch {
+                    parsed = [];
+                }
+            }
+            setBillingItems(parsed);
+            setEta(task.eta ? new Date(task.eta).toISOString().split('T')[0] : '');
+        }
+    }, [task]);
 
     // Calculated total
     const totalHours = billingItems.reduce((acc, item) => acc + (Number(item.hours) || 0), 0);

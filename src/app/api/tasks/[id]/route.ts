@@ -60,6 +60,26 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
             where: { id: taskId },
             data: dataToUpdate
         });
+
+        // Sync client's overall billedHours if Admin modified billing entries
+        if (session.role === 'ADMIN' && (billingItems !== undefined || billingHours !== undefined)) {
+            const clientProjects = await prisma.project.findMany({
+                where: { clientId: task.project.clientId },
+                select: { id: true }
+            });
+            const projectIds = clientProjects.map((p: any) => p.id);
+
+            const totalBilled = await prisma.task.aggregate({
+                where: { projectId: { in: projectIds } },
+                _sum: { billingHours: true }
+            });
+
+            await prisma.user.update({
+                where: { id: task.project.clientId },
+                data: { billedHours: totalBilled._sum.billingHours || 0 }
+            });
+        }
+
         return NextResponse.json(updatedTask);
     } catch (error: any) {
         return NextResponse.json({ error: error.message }, { status: 500 });
