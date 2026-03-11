@@ -37,7 +37,6 @@ export function CreateTaskModal({ isOpen, onClose, isAdmin }: CreateTaskModalPro
                         setProjects(data); // Using same projects array state to hold generic lists
                         if (data.length > 0) {
                             if (isAdmin) setFormData(prev => ({ ...prev, clientId: data[0].id }));
-                            else setFormData(prev => ({ ...prev, projectId: data[0].id }));
                         }
                     }
                 })
@@ -64,7 +63,7 @@ export function CreateTaskModal({ isOpen, onClose, isAdmin }: CreateTaskModalPro
 
             router.refresh(); // Tell Next.js Server Components to re-fetch
             onClose();
-            setFormData({ projectId: !isAdmin ? (projects[0]?.id || '') : '', clientId: isAdmin ? (projects[0]?.id || '') : '', name: '', description: '', isPriority: false });
+            setFormData({ projectId: '', clientId: isAdmin ? (projects[0]?.id || '') : '', name: '', description: '', isPriority: false });
         } catch (err: any) {
             setError(err.message);
         } finally {
@@ -105,31 +104,30 @@ export function CreateTaskModal({ isOpen, onClose, isAdmin }: CreateTaskModalPro
                             )}
 
                             <div className="space-y-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-brand-700 mb-1">
-                                        {isAdmin ? 'Select Client' : 'Project Selection'} <span className="text-danger">*</span>
-                                    </label>
-                                    {isLoading ? (
-                                        <div className="h-10 border rounded-lg bg-brand-50 animate-pulse"></div>
-                                    ) : (
-                                        <select
-                                            required
-                                            value={isAdmin ? formData.clientId : formData.projectId}
-                                            onChange={(e) => {
-                                                if (isAdmin) setFormData({ ...formData, clientId: e.target.value })
-                                                else setFormData({ ...formData, projectId: e.target.value })
-                                            }}
-                                            className="w-full px-4 py-2 bg-white border border-border rounded-lg outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent transition-all text-sm text-brand-900"
-                                        >
-                                            <option value="" disabled>Select a {isAdmin ? 'client' : 'project'}</option>
-                                            {projects.map((p) => (
-                                                <option key={p.id} value={p.id}>
-                                                    {isAdmin ? p.companyName : p.name}
-                                                </option>
-                                            ))}
-                                        </select>
-                                    )}
-                                </div>
+                                {isAdmin && (
+                                    <div>
+                                        <label className="block text-sm font-medium text-brand-700 mb-1">
+                                            Select Client <span className="text-danger">*</span>
+                                        </label>
+                                        {isLoading ? (
+                                            <div className="h-10 border rounded-lg bg-brand-50 animate-pulse"></div>
+                                        ) : (
+                                            <select
+                                                required
+                                                value={formData.clientId}
+                                                onChange={(e) => setFormData({ ...formData, clientId: e.target.value })}
+                                                className="w-full px-4 py-2 bg-white border border-border rounded-lg outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent transition-all text-sm text-brand-900"
+                                            >
+                                                <option value="" disabled>Select a client</option>
+                                                {projects.map((p) => (
+                                                    <option key={p.id} value={p.id}>
+                                                        {p.companyName || p.name}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        )}
+                                    </div>
+                                )}
 
                                 <div>
                                     <label className="block text-sm font-medium text-brand-700 mb-1">Task Title <span className="text-danger">*</span></label>
@@ -177,7 +175,7 @@ export function CreateTaskModal({ isOpen, onClose, isAdmin }: CreateTaskModalPro
                                 </button>
                                 <button
                                     type="submit"
-                                    disabled={isSubmitting || (!formData.projectId && !formData.clientId) || !formData.name}
+                                    disabled={isSubmitting || (isAdmin && !formData.clientId) || !formData.name}
                                     className="flex-1 px-4 py-2 bg-brand-900 text-white rounded-lg hover:bg-brand-950 transition-colors font-medium text-sm flex items-center justify-center disabled:opacity-70"
                                 >
                                     {isSubmitting ? <Loader2 size={16} className="animate-spin" /> : 'Create Task'}
