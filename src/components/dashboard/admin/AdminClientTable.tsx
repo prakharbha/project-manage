@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Mail, Building, Edit2, X, Loader2 } from 'lucide-react';
+import { Mail, Building, Edit2, X, Loader2, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 export function AdminClientTable({ initialClients }: { initialClients: any[] }) {
@@ -12,6 +12,7 @@ export function AdminClientTable({ initialClients }: { initialClients: any[] }) 
     const [isCreatingClient, setIsCreatingClient] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [createError, setCreateError] = useState('');
+    const [deletingId, setDeletingId] = useState<string | null>(null);
 
     // Form state matching the edit modal
     const [formData, setFormData] = useState({
@@ -95,6 +96,32 @@ export function AdminClientTable({ initialClients }: { initialClients: any[] }) 
         setIsCreatingClient(true);
     };
 
+    const handleDelete = async (clientId: string, companyName: string) => {
+        if (!window.confirm(`Are you sure you want to permanently delete ${companyName || 'this client'} and all their associated tasks? This action CANNOT be undone.`)) {
+            return;
+        }
+
+        setDeletingId(clientId);
+        try {
+            const res = await fetch(`/api/clients/${clientId}`, {
+                method: 'DELETE'
+            });
+
+            if (res.ok) {
+                setClients(prev => prev.filter(c => c.id !== clientId));
+                router.refresh();
+            } else {
+                const errData = await res.json();
+                alert(errData.error || 'Failed to delete client');
+            }
+        } catch (error) {
+            console.error('Failed to delete client:', error);
+            alert('An unexpected error occurred while deleting.');
+        } finally {
+            setDeletingId(null);
+        }
+    };
+
     return (
         <div className="flex flex-col gap-4 flex-1">
             <div className="flex justify-end">
@@ -149,13 +176,23 @@ export function AdminClientTable({ initialClients }: { initialClients: any[] }) 
                                             </div>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-right">
-                                            <button
-                                                onClick={() => openEditModal(client)}
-                                                className="p-1.5 text-brand-400 hover:text-accent hover:bg-accent/10 rounded transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
-                                                title="Edit Client"
-                                            >
-                                                <Edit2 size={16} />
-                                            </button>
+                                            <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+                                                <button
+                                                    onClick={() => openEditModal(client)}
+                                                    className="p-1.5 text-brand-400 hover:text-accent hover:bg-accent/10 rounded transition-colors"
+                                                    title="Edit Client"
+                                                >
+                                                    <Edit2 size={16} />
+                                                </button>
+                                                <button
+                                                    onClick={() => handleDelete(client.id, client.companyName)}
+                                                    disabled={deletingId === client.id}
+                                                    className="p-1.5 text-danger-dark/50 hover:text-danger hover:bg-danger/10 rounded transition-colors disabled:opacity-50"
+                                                    title="Delete Client"
+                                                >
+                                                    {deletingId === client.id ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
+                                                </button>
+                                            </div>
                                         </td>
                                     </tr>
                                 ))}
