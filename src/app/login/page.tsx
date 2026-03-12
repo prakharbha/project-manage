@@ -57,12 +57,10 @@ export default function LoginPage() {
                         <div className="relative w-48 h-16 sm:w-56 sm:h-20 mb-2">
                             <Image src="/nandann-logo.png" alt="Nandann Logo" fill className="object-contain" priority />
                         </div>
-                        <div className="flex items-center gap-1.5 -mt-[7px]">
-                            <span className="font-bold text-3xl sm:text-4xl tracking-tight text-brand-900">G</span>
-                            <div className="relative w-7 h-7 sm:w-8 sm:h-8 mt-1.5">
-                                <Image src="/football.png" alt="O" fill className="object-contain" priority />
-                            </div>
-                            <span className="font-bold text-3xl sm:text-4xl tracking-tight text-brand-900">AL</span>
+                        <div className="flex items-center gap-0 -mt-[14px]">
+                            <span className="font-bold text-5xl leading-none tracking-tight text-brand-900">G</span>
+                            <Image src="/football.png" alt="O" width={52} height={52} className="object-contain" style={{ filter: 'contrast(40)', mixBlendMode: 'multiply', marginTop: '2px' }} priority />
+                            <span className="font-bold text-5xl leading-none tracking-tight text-brand-900">AL</span>
                         </div>
                     </div>
                     <p className="text-brand-500 text-sm text-center">Manage your tasks seamlessly</p>

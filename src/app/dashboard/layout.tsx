@@ -27,12 +27,10 @@ export default async function DashboardLayout({
                         <div className="relative w-36 h-12 flex-shrink-0">
                             <Image src="/nandann-logo.png" alt="Nandann Logo" fill className="object-contain" priority />
                         </div>
-                        <div className="flex items-center gap-1 -mt-[7px]">
-                            <span className="font-bold text-2xl tracking-tight text-brand-900">G</span>
-                            <div className="relative w-5 h-5 mt-1">
-                                <Image src="/football.png" alt="O" fill className="object-contain" priority />
-                            </div>
-                            <span className="font-bold text-2xl tracking-tight text-brand-900">AL</span>
+                        <div className="flex items-center gap-0 -mt-[10px]">
+                            <span className="font-bold text-3xl leading-none tracking-tight text-brand-900">G</span>
+                            <Image src="/football.png" alt="O" width={36} height={36} className="object-contain" style={{ filter: 'contrast(40)', mixBlendMode: 'multiply', marginTop: '2px' }} priority />
+                            <span className="font-bold text-3xl leading-none tracking-tight text-brand-900">AL</span>
                         </div>
                     </div>
                 </div>
