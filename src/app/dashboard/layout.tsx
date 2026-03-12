@@ -27,7 +27,13 @@ export default async function DashboardLayout({
                         <div className="relative w-36 h-12 flex-shrink-0">
                             <Image src="/nandann-logo.png" alt="Nandann Logo" fill className="object-contain" priority />
                         </div>
-                        <span className="font-bold text-2xl tracking-tight text-brand-900 mt-1">OS<span className="text-accent">.</span></span>
+                        <div className="flex items-center gap-1 -mt-[7px]">
+                            <span className="font-bold text-2xl tracking-tight text-brand-900">G</span>
+                            <div className="relative w-5 h-5 mt-1">
+                                <Image src="/football.png" alt="O" fill className="object-contain" priority />
+                            </div>
+                            <span className="font-bold text-2xl tracking-tight text-brand-900">AL</span>
+                        </div>
                     </div>
                 </div>
 
