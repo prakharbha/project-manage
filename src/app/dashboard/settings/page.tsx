@@ -13,11 +13,15 @@ interface NotifPrefs {
 type PushStatus = 'unsupported' | 'checking' | 'denied' | 'subscribed' | 'unsubscribed';
 
 /** Convert a base64url VAPID public key to the Uint8Array format the Push API expects. */
-function urlBase64ToUint8Array(base64String: string): Uint8Array {
+function urlBase64ToUint8Array(base64String: string): Uint8Array<ArrayBuffer> {
     const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
     const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
     const rawData = atob(base64);
-    return Uint8Array.from([...rawData].map((c) => c.charCodeAt(0)));
+    const output = new Uint8Array(rawData.length);
+    for (let i = 0; i < rawData.length; i++) {
+        output[i] = rawData.charCodeAt(i);
+    }
+    return output;
 }
 
 function Toggle({ enabled, onToggle, loading }: { enabled: boolean; onToggle: () => void; loading: boolean }) {
