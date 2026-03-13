@@ -43,9 +43,10 @@ model User {
   notifyComments       Boolean @default(true)
   notifyBillingUpdates Boolean @default(true)
 
-  tasks         Task[]         @relation("ClientTasks")
-  comments      Comment[]
-  notifications Notification[]
+  tasks             Task[]             @relation("ClientTasks")
+  comments          Comment[]
+  notifications     Notification[]
+  pushSubscriptions PushSubscription[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -94,6 +95,19 @@ model Notification {
   message String
   isRead  Boolean @default(false)
   link    String? // e.g. '/dashboard/projects'
+
+  createdAt DateTime @default(now())
+}
+
+// One row per browser/device that has enabled push notifications
+model PushSubscription {
+  id     String @id @default(uuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  endpoint String @unique // push service URL — unique per device
+  p256dh   String         // client public key
+  auth     String         // client auth secret
 
   createdAt DateTime @default(now())
 }

@@ -3,6 +3,7 @@ import { getSession } from '@/lib/auth';
 import prisma from '@/lib/db';
 import { Resend } from 'resend';
 import { checkCsrf, csrfError, escapeHtml, auditLog } from '@/lib/security';
+import { sendPushToUser } from '@/lib/webPush';
 
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 const FROM = 'Nandann <noreply@nandann.com>';
@@ -282,6 +283,38 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
                 }
             } catch (err) {
                 console.error('Failed to send task update email', err);
+            }
+        }
+
+        // ── Push notifications (admin actions only) ──
+        if (session.role === 'ADMIN') {
+            try {
+                const client = task.client;
+                const pushUrl = `/dashboard/tasks?taskId=${task.id}`;
+
+                // Status change push
+                if (status !== undefined && status !== task.status && client.notifyTaskUpdates) {
+                    await sendPushToUser(task.clientId, {
+                        title: 'Task Status Updated',
+                        body: `"${task.name}" is now ${STATUS_LABELS[status] || status}`,
+                        url: pushUrl,
+                        tag: `task-status-${task.id}`,
+                    });
+                }
+
+                // Billing change push
+                const billingChanged = billingItems !== undefined || billingHours !== undefined;
+                if (billingChanged && client.notifyBillingUpdates) {
+                    const newHours = dataToUpdate.billingHours ?? task.billingHours;
+                    await sendPushToUser(task.clientId, {
+                        title: 'Billing Updated',
+                        body: `"${task.name}" billing updated to ${newHours} hrs`,
+                        url: `/dashboard`,
+                        tag: `task-billing-${task.id}`,
+                    });
+                }
+            } catch (err) {
+                console.error('Failed to send task push notification', err);
             }
         }
 

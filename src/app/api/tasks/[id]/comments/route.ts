@@ -4,6 +4,7 @@ import prisma from '@/lib/db';
 import { Resend } from 'resend';
 import { checkRateLimit, getClientIp, tooManyRequestsResponse } from '@/lib/rateLimit';
 import { checkCsrf, csrfError, escapeHtml } from '@/lib/security';
+import { sendPushToUser, sendPushToAdmins } from '@/lib/webPush';
 
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 const FROM = 'Nandann <noreply@nandann.com>';
@@ -219,6 +220,32 @@ export async function POST(req: Request, context: { params: Promise<{ id: string
             } catch (err) {
                 console.error('Failed to send comment email', err);
             }
+        }
+
+        // ── Push notifications ──
+        try {
+            const pushUrl = `/dashboard/tasks?taskId=${task.id}`;
+            if (isClient) {
+                // Client commented → push all admins (no extra pref check — they use notifyComments)
+                await sendPushToAdmins({
+                    title: 'New Comment',
+                    body: `${task.client.companyName || 'A client'} commented on "${task.name}"`,
+                    url: pushUrl,
+                    tag: `comment-${task.id}`,
+                });
+            } else {
+                // Admin commented → push client if notifyComments enabled
+                if (task.client.notifyComments) {
+                    await sendPushToUser(task.clientId, {
+                        title: 'New Reply from Nandann',
+                        body: `The Nandann team replied on "${task.name}"`,
+                        url: pushUrl,
+                        tag: `comment-${task.id}`,
+                    });
+                }
+            }
+        } catch (err) {
+            console.error('Failed to send comment push notification', err);
         }
 
         return NextResponse.json(comment, { status: 201 });

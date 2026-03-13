@@ -2,12 +2,22 @@
 
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { User, Mail, Lock, Loader2, Save, CheckCircle2, Bell, CheckCheck } from 'lucide-react';
+import { User, Mail, Lock, Loader2, Save, CheckCircle2, Bell, CheckCheck, Smartphone } from 'lucide-react';
 
 interface NotifPrefs {
     notifyTaskUpdates: boolean;
     notifyComments: boolean;
     notifyBillingUpdates: boolean;
+}
+
+type PushStatus = 'unsupported' | 'checking' | 'denied' | 'subscribed' | 'unsubscribed';
+
+/** Convert a base64url VAPID public key to the Uint8Array format the Push API expects. */
+function urlBase64ToUint8Array(base64String: string): Uint8Array {
+    const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+    const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+    const rawData = atob(base64);
+    return Uint8Array.from([...rawData].map((c) => c.charCodeAt(0)));
 }
 
 function Toggle({ enabled, onToggle, loading }: { enabled: boolean; onToggle: () => void; loading: boolean }) {
@@ -44,6 +54,10 @@ export default function SettingsPage() {
     const [savingPref, setSavingPref] = useState<string | null>(null);
     const [savedPref, setSavedPref] = useState<string | null>(null);
 
+    // Push notification state
+    const [pushStatus, setPushStatus] = useState<PushStatus>('checking');
+    const [pushLoading, setPushLoading] = useState(false);
+
     useEffect(() => {
         const fetchProfile = async () => {
             try {
@@ -66,6 +80,84 @@ export default function SettingsPage() {
         };
         fetchProfile();
     }, []);
+
+    // Register service worker and check push subscription state
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+
+        if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+            setPushStatus('unsupported');
+            return;
+        }
+
+        if (Notification.permission === 'denied') {
+            setPushStatus('denied');
+            return;
+        }
+
+        navigator.serviceWorker.register('/sw.js').then(async (reg) => {
+            const existing = await reg.pushManager.getSubscription();
+            setPushStatus(existing ? 'subscribed' : 'unsubscribed');
+        }).catch(() => {
+            setPushStatus('unsupported');
+        });
+    }, []);
+
+    const handleEnablePush = async () => {
+        setPushLoading(true);
+        try {
+            const permission = await Notification.requestPermission();
+            if (permission !== 'granted') {
+                setPushStatus('denied');
+                return;
+            }
+
+            const reg = await navigator.serviceWorker.ready;
+            const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+            if (!vapidKey) {
+                console.error('NEXT_PUBLIC_VAPID_PUBLIC_KEY is not set');
+                return;
+            }
+
+            const subscription = await reg.pushManager.subscribe({
+                userVisibleOnly: true,
+                applicationServerKey: urlBase64ToUint8Array(vapidKey),
+            });
+
+            await fetch('/api/push/subscribe', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(subscription.toJSON()),
+            });
+
+            setPushStatus('subscribed');
+        } catch (err) {
+            console.error('Failed to enable push', err);
+        } finally {
+            setPushLoading(false);
+        }
+    };
+
+    const handleDisablePush = async () => {
+        setPushLoading(true);
+        try {
+            const reg = await navigator.serviceWorker.ready;
+            const subscription = await reg.pushManager.getSubscription();
+            if (subscription) {
+                await fetch('/api/push/subscribe', {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ endpoint: subscription.endpoint }),
+                });
+                await subscription.unsubscribe();
+            }
+            setPushStatus('unsubscribed');
+        } catch (err) {
+            console.error('Failed to disable push', err);
+        } finally {
+            setPushLoading(false);
+        }
+    };
 
     const handleSaveProfile = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -155,19 +247,27 @@ export default function SettingsPage() {
         {
             key: 'notifyTaskUpdates',
             label: 'Task Updates',
-            description: 'Get notified by email when your task status changes.',
+            description: 'Get notified when your task status changes.',
         },
         {
             key: 'notifyComments',
             label: 'New Comments',
-            description: 'Get notified by email when someone replies to your task.',
+            description: 'Get notified when someone replies to your task.',
         },
         {
             key: 'notifyBillingUpdates',
             label: 'Billing Updates',
-            description: 'Get notified by email when billing information is updated.',
+            description: 'Get notified when billing information is updated.',
         },
     ];
+
+    const pushStatusLabel: Record<PushStatus, { text: string; color: string }> = {
+        unsupported: { text: 'Not supported by this browser', color: 'text-brand-400' },
+        checking:    { text: 'Checking…',                    color: 'text-brand-400' },
+        denied:      { text: 'Blocked by browser',           color: 'text-danger'    },
+        subscribed:  { text: 'Enabled',                      color: 'text-success'   },
+        unsubscribed:{ text: 'Disabled',                     color: 'text-brand-400' },
+    };
 
     return (
         <div className="max-w-3xl mx-auto space-y-6">
@@ -291,7 +391,7 @@ export default function SettingsPage() {
                         <h3 className="text-lg font-semibold text-brand-900">Notification Preferences</h3>
                     </div>
                     <p className="text-sm text-brand-500 mb-6">
-                        Choose which email notifications you receive. All notifications are sent from{' '}
+                        Controls both email and push notifications. Emails are sent from{' '}
                         <span className="font-medium text-brand-700">noreply@nandann.com</span>.
                     </p>
 
@@ -316,6 +416,71 @@ export default function SettingsPage() {
                                 </div>
                             </div>
                         ))}
+                    </div>
+                </div>
+            </motion.div>
+
+            {/* This Device — Push Notifications */}
+            <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 }}
+                className="bg-white rounded-xl border border-border shadow-sm overflow-hidden"
+            >
+                <div className="p-6 sm:p-8">
+                    <div className="flex items-center gap-2 mb-1">
+                        <Smartphone size={18} className="text-brand-400" />
+                        <h3 className="text-lg font-semibold text-brand-900">This Device</h3>
+                    </div>
+                    <p className="text-sm text-brand-500 mb-6">
+                        Receive instant push notifications on this device, even when the app is in the background.
+                        Your notification preferences above still apply.
+                    </p>
+
+                    <div className="flex items-center justify-between gap-4">
+                        <div>
+                            <p className="text-sm font-medium text-brand-900">Push Notifications</p>
+                            <p className={`text-xs mt-0.5 ${pushStatusLabel[pushStatus].color}`}>
+                                {pushStatusLabel[pushStatus].text}
+                            </p>
+                            {pushStatus === 'denied' && (
+                                <p className="text-xs text-brand-400 mt-1">
+                                    To enable, allow notifications in your browser settings and reload the page.
+                                </p>
+                            )}
+                        </div>
+
+                        <div className="flex-shrink-0">
+                            {pushStatus === 'checking' && (
+                                <Loader2 size={20} className="animate-spin text-brand-300" />
+                            )}
+                            {pushStatus === 'unsupported' && (
+                                <span className="text-xs text-brand-400">Not available</span>
+                            )}
+                            {pushStatus === 'denied' && (
+                                <span className="text-xs text-brand-400">Blocked</span>
+                            )}
+                            {pushStatus === 'unsubscribed' && (
+                                <button
+                                    onClick={handleEnablePush}
+                                    disabled={pushLoading}
+                                    className="flex items-center gap-2 bg-brand-900 text-white px-4 py-2 rounded-lg font-medium text-sm hover:bg-brand-950 transition-all shadow-sm active:scale-95 disabled:opacity-50"
+                                >
+                                    {pushLoading ? <Loader2 size={14} className="animate-spin" /> : null}
+                                    Enable
+                                </button>
+                            )}
+                            {pushStatus === 'subscribed' && (
+                                <button
+                                    onClick={handleDisablePush}
+                                    disabled={pushLoading}
+                                    className="flex items-center gap-2 bg-white border border-border text-brand-700 px-4 py-2 rounded-lg font-medium text-sm hover:bg-brand-50 transition-all shadow-sm active:scale-95 disabled:opacity-50"
+                                >
+                                    {pushLoading ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} className="text-success" />}
+                                    Disable
+                                </button>
+                            )}
+                        </div>
                     </div>
                 </div>
             </motion.div>
