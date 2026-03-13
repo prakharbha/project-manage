@@ -1,10 +1,12 @@
 import jwt from 'jsonwebtoken';
 import { cookies } from 'next/headers';
 
-const JWT_SECRET = process.env.JWT_SECRET;
-if (!JWT_SECRET) {
+const _jwtSecret = process.env.JWT_SECRET;
+if (!_jwtSecret) {
     throw new Error('JWT_SECRET environment variable is required. Set it in your .env file.');
 }
+// Narrow to string so TypeScript accepts it in jwt.sign / jwt.verify
+const JWT_SECRET: string = _jwtSecret;
 
 export interface TokenPayload {
     userId: string;
