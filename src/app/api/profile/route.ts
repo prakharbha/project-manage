@@ -10,7 +10,7 @@ export async function GET() {
 
         const user = await prisma.user.findUnique({
             where: { id: session.userId },
-            select: { name: true, email: true }
+            select: { name: true, email: true, notifyTaskUpdates: true, notifyComments: true, notifyBillingUpdates: true }
         });
 
         if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
@@ -26,10 +26,7 @@ export async function PATCH(req: Request) {
         const session = await getSession();
         if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-        const { name, email, currentPassword, newPassword } = await req.json();
-
-        // If email or password is being changed, we should verify the current password first.
-        // Actually, to make it seamless, let's only require currentPassword if changing the password.
+        const { name, email, currentPassword, newPassword, notifyTaskUpdates, notifyComments, notifyBillingUpdates } = await req.json();
 
         const user = await prisma.user.findUnique({ where: { id: session.userId } });
         if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
@@ -58,6 +55,11 @@ export async function PATCH(req: Request) {
 
             dataToUpdate.passwordHash = await bcrypt.hash(newPassword, 10);
         }
+
+        // Notification preferences
+        if (notifyTaskUpdates !== undefined) dataToUpdate.notifyTaskUpdates = Boolean(notifyTaskUpdates);
+        if (notifyComments !== undefined) dataToUpdate.notifyComments = Boolean(notifyComments);
+        if (notifyBillingUpdates !== undefined) dataToUpdate.notifyBillingUpdates = Boolean(notifyBillingUpdates);
 
         if (Object.keys(dataToUpdate).length === 0) {
             return NextResponse.json({ error: 'No fields to update' }, { status: 400 });

@@ -39,6 +39,10 @@ model User {
   resetToken       String?
   resetTokenExpiry DateTime?
 
+  notifyTaskUpdates    Boolean @default(true)
+  notifyComments       Boolean @default(true)
+  notifyBillingUpdates Boolean @default(true)
+
   tasks         Task[]         @relation("ClientTasks")
   comments      Comment[]
   notifications Notification[]
