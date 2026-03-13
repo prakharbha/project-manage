@@ -27,7 +27,7 @@ export default async function DashboardLayout({
                         </div>
                         <div className="flex items-center gap-0 -mt-[7px]">
                             <span className="font-bold text-2xl leading-none tracking-tight text-brand-900">G</span>
-                            <Image src="/football.png" alt="O" width={26} height={26} className="object-contain" style={{ filter: 'contrast(40)', mixBlendMode: 'multiply', marginTop: '2px' }} priority />
+                            <Image src="/football.png" alt="O" width={26} height={26} className="object-contain" style={{ marginTop: '2px' }} priority />
                             <span className="font-bold text-2xl leading-none tracking-tight text-brand-900">AL</span>
                         </div>
                     </div>
@@ -73,7 +73,7 @@ export default async function DashboardLayout({
                         </div>
                         <div className="flex items-center gap-0 -mt-[5px]">
                             <span className="font-bold text-xl leading-none tracking-tight text-brand-900">G</span>
-                            <Image src="/football.png" alt="O" width={22} height={22} className="object-contain" style={{ filter: 'contrast(40)', mixBlendMode: 'multiply', marginTop: '2px' }} priority />
+                            <Image src="/football.png" alt="O" width={22} height={22} className="object-contain" style={{ marginTop: '2px' }} priority />
                             <span className="font-bold text-xl leading-none tracking-tight text-brand-900">AL</span>
                         </div>
                     </div>
