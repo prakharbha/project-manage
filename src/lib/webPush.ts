@@ -4,7 +4,7 @@
  * Requires these env vars:
  *   VAPID_PUBLIC_KEY        — base64url VAPID public key
  *   VAPID_PRIVATE_KEY       — base64url VAPID private key
- *   VAPID_SUBJECT           — mailto: or https: contact URI  (default: mailto:admin@nandann.com)
+ *   VAPID_SUBJECT           — mailto: or https: contact URI  (default: mailto:prakhar@nandann.com)
  *
  * Generate a key pair (run once):
  *   npx web-push generate-vapid-keys
@@ -19,7 +19,7 @@ const isConfigured =
 
 if (isConfigured) {
     webpush.setVapidDetails(
-        process.env.VAPID_SUBJECT || 'mailto:admin@nandann.com',
+        process.env.VAPID_SUBJECT || 'mailto:prakhar@nandann.com',
         process.env.VAPID_PUBLIC_KEY!,
         process.env.VAPID_PRIVATE_KEY!,
     );
