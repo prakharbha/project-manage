@@ -63,7 +63,9 @@ export async function GET(req: Request) {
             }
         });
 
-        return NextResponse.json({ success: true, message: 'Database seeded successfully', accounts: { admin: 'prakhar@nandann.com', client: 'client@example.com', password: 'password123' } });
+        // Log seed accounts to server console only — never return credentials in the response
+        console.log('[Seed] Created accounts: admin=prakhar@nandann.com client=client@example.com (change passwords immediately)');
+        return NextResponse.json({ success: true, message: 'Database seeded successfully. Check server logs for account details.' });
 
     } catch (error) {
         console.error('Seed error', error);

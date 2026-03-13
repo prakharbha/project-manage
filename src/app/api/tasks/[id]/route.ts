@@ -2,10 +2,21 @@ import { NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
 import prisma from '@/lib/db';
 import { Resend } from 'resend';
+import { checkCsrf, csrfError, escapeHtml, auditLog } from '@/lib/security';
 
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 const FROM = 'Nandann <noreply@nandann.com>';
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://clients.nandann.com';
+
+const MAX_BODY_BYTES = 256 * 1_024; // 256 KB (billing items can be longer)
+
+const VALID_STATUSES = new Set([
+    'PENDING',
+    'IN_PROGRESS',
+    'WAITING_ON_CLIENT',
+    'TESTING',
+    'COMPLETED',
+]);
 
 const STATUS_LABELS: Record<string, string> = {
     PENDING: 'Pending',
@@ -73,9 +84,18 @@ function emailTemplate(title: string, bodyHtml: string) {
 }
 
 export async function PATCH(req: Request, context: { params: Promise<{ id: string }> }) {
+    // CSRF check
+    if (!checkCsrf(req)) return csrfError();
+
     try {
         const session = await getSession();
         if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+        // Body size guard
+        const contentLength = Number(req.headers.get('content-length') ?? 0);
+        if (contentLength > MAX_BODY_BYTES) {
+            return NextResponse.json({ error: 'Request body too large' }, { status: 413 });
+        }
 
         const params = await context.params;
         const taskId = params.id;
@@ -105,23 +125,55 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
             return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
         }
 
-        const dataToUpdate: any = {};
+        const dataToUpdate: Record<string, unknown> = {};
 
         if (session.role === 'ADMIN') {
-            if (status !== undefined) dataToUpdate.status = status;
+            // Validate status against allowed enum values
+            if (status !== undefined) {
+                if (!VALID_STATUSES.has(status)) {
+                    return NextResponse.json(
+                        { error: `Invalid status. Must be one of: ${[...VALID_STATUSES].join(', ')}` },
+                        { status: 400 }
+                    );
+                }
+                dataToUpdate.status = status;
+            }
 
             if (billingItems !== undefined) {
+                // Validate billingItems is an array with numeric hours
+                if (!Array.isArray(billingItems)) {
+                    return NextResponse.json({ error: 'billingItems must be an array' }, { status: 400 });
+                }
+                for (const item of billingItems) {
+                    const h = Number(item?.hours);
+                    if (isNaN(h) || h < 0 || h > 10_000) {
+                        return NextResponse.json(
+                            { error: 'Each billing item hours must be a number between 0 and 10 000' },
+                            { status: 400 }
+                        );
+                    }
+                }
                 dataToUpdate.billingItems = billingItems;
+
                 if (!billingHours) {
-                    const calculatedHours = Array.isArray(billingItems)
-                        ? billingItems.reduce((acc: number, item: any) => acc + (Number(item.hours) || 0), 0)
-                        : 0;
+                    const calculatedHours = billingItems.reduce(
+                        (acc: number, item: any) => acc + (Number(item.hours) || 0),
+                        0
+                    );
                     dataToUpdate.billingHours = calculatedHours;
                 } else {
-                    dataToUpdate.billingHours = Number(billingHours);
+                    const bh = Number(billingHours);
+                    if (isNaN(bh) || bh < 0 || bh > 100_000) {
+                        return NextResponse.json({ error: 'billingHours must be between 0 and 100 000' }, { status: 400 });
+                    }
+                    dataToUpdate.billingHours = bh;
                 }
             } else if (billingHours !== undefined) {
-                dataToUpdate.billingHours = Number(billingHours);
+                const bh = Number(billingHours);
+                if (isNaN(bh) || bh < 0 || bh > 100_000) {
+                    return NextResponse.json({ error: 'billingHours must be between 0 and 100 000' }, { status: 400 });
+                }
+                dataToUpdate.billingHours = bh;
             }
 
             if (eta !== undefined) dataToUpdate.eta = eta ? new Date(eta) : null;
@@ -151,10 +203,21 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
             });
         }
 
+        // Audit log for admin mutations
+        if (session.role === 'ADMIN') {
+            auditLog('TASK_UPDATED', session.userId, {
+                taskId,
+                clientId: task.clientId,
+                fields: Object.keys(dataToUpdate),
+            });
+        }
+
         // ── Email notifications (admin actions only) ──
         if (resend && session.role === 'ADMIN') {
             try {
                 const client = task.client;
+                // Escape task name for safe HTML embedding
+                const safeTaskName = escapeHtml(task.name);
 
                 // Status change email
                 if (status !== undefined && status !== task.status && client.notifyTaskUpdates) {
@@ -172,9 +235,9 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
                                <tr>
                                  <td style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:16px 20px;">
                                    <p style="margin:0 0 10px;font-size:13px;color:#9ca3af;text-transform:uppercase;letter-spacing:0.5px;font-weight:600;">Task</p>
-                                   <p style="margin:0 0 14px;font-size:15px;font-weight:600;color:#111827;">${task.name}</p>
+                                   <p style="margin:0 0 14px;font-size:15px;font-weight:600;color:#111827;">${safeTaskName}</p>
                                    <p style="margin:0 0 4px;font-size:13px;color:#9ca3af;text-transform:uppercase;letter-spacing:0.5px;font-weight:600;">Status</p>
-                                   <p style="margin:0;font-size:15px;font-weight:600;color:#2e3845;">${STATUS_LABELS[status] || status}</p>
+                                   <p style="margin:0;font-size:15px;font-weight:600;color:#2e3845;">${escapeHtml(STATUS_LABELS[status] || status)}</p>
                                  </td>
                                </tr>
                              </table>
@@ -204,7 +267,7 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
                                <tr>
                                  <td style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:16px 20px;">
                                    <p style="margin:0 0 10px;font-size:13px;color:#9ca3af;text-transform:uppercase;letter-spacing:0.5px;font-weight:600;">Task</p>
-                                   <p style="margin:0 0 14px;font-size:15px;font-weight:600;color:#111827;">${task.name}</p>
+                                   <p style="margin:0 0 14px;font-size:15px;font-weight:600;color:#111827;">${safeTaskName}</p>
                                    <p style="margin:0 0 4px;font-size:13px;color:#9ca3af;text-transform:uppercase;letter-spacing:0.5px;font-weight:600;">Billed Hours</p>
                                    <p style="margin:0;font-size:15px;font-weight:600;color:#2e3845;">${newHours} hrs</p>
                                  </td>
@@ -224,11 +287,15 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
 
         return NextResponse.json(updatedTask);
     } catch (error: any) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        console.error('PATCH /api/tasks/[id] error', error);
+        return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }
 
 export async function DELETE(req: Request, context: { params: Promise<{ id: string }> }) {
+    // CSRF check
+    if (!checkCsrf(req)) return csrfError();
+
     try {
         const session = await getSession();
         if (!session || session.role !== 'ADMIN') return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -238,8 +305,11 @@ export async function DELETE(req: Request, context: { params: Promise<{ id: stri
 
         await prisma.task.delete({ where: { id: taskId } });
 
+        auditLog('TASK_DELETED', session.userId, { taskId });
+
         return NextResponse.json({ success: true });
     } catch (error: any) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        console.error('DELETE /api/tasks/[id] error', error);
+        return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }

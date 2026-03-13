@@ -2,10 +2,19 @@ import { NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
 import prisma from '@/lib/db';
 import { Resend } from 'resend';
+import { checkRateLimit, getClientIp, tooManyRequestsResponse } from '@/lib/rateLimit';
+import { checkCsrf, csrfError, escapeHtml } from '@/lib/security';
 
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 const FROM = 'Nandann <noreply@nandann.com>';
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://clients.nandann.com';
+
+// 20 comments per user per 10 minutes
+const RATE_LIMIT = 20;
+const RATE_WINDOW_MS = 10 * 60 * 1_000;
+
+const MAX_COMMENT_LENGTH = 5_000;
+const MAX_BODY_BYTES = 32 * 1_024; // 32 KB
 
 function emailTemplate(title: string, bodyHtml: string) {
     return `<!DOCTYPE html>
@@ -65,15 +74,40 @@ function emailTemplate(title: string, bodyHtml: string) {
 }
 
 export async function POST(req: Request, context: { params: Promise<{ id: string }> }) {
+    // CSRF check
+    if (!checkCsrf(req)) return csrfError();
+
+    // Rate limiting per user IP
+    const ip = getClientIp(req);
+    const rl = checkRateLimit(`comment:${ip}`, RATE_LIMIT, RATE_WINDOW_MS);
+    if (!rl.allowed) return tooManyRequestsResponse(rl.resetAt);
+
     try {
         const session = await getSession();
         if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+        // Body size guard
+        const contentLength = Number(req.headers.get('content-length') ?? 0);
+        if (contentLength > MAX_BODY_BYTES) {
+            return NextResponse.json({ error: 'Request body too large' }, { status: 413 });
+        }
 
         const params = await context.params;
         const taskId = params.id;
         const { content } = await req.json();
 
-        if (!content) return NextResponse.json({ error: 'Comment content is required' }, { status: 400 });
+        // Content validation
+        if (!content || typeof content !== 'string' || content.trim().length === 0) {
+            return NextResponse.json({ error: 'Comment content is required' }, { status: 400 });
+        }
+        if (content.length > MAX_COMMENT_LENGTH) {
+            return NextResponse.json(
+                { error: `Comment must not exceed ${MAX_COMMENT_LENGTH.toLocaleString()} characters` },
+                { status: 400 }
+            );
+        }
+
+        const trimmedContent = content.trim();
 
         const task = await prisma.task.findUnique({
             where: { id: taskId },
@@ -91,7 +125,7 @@ export async function POST(req: Request, context: { params: Promise<{ id: string
         }
 
         const comment = await prisma.comment.create({
-            data: { taskId, userId: session.userId, content },
+            data: { taskId, userId: session.userId, content: trimmedContent },
             include: { user: { select: { name: true, role: true, companyName: true } } }
         });
 
@@ -124,6 +158,11 @@ export async function POST(req: Request, context: { params: Promise<{ id: string
         // ── Email notifications ──
         if (resend) {
             try {
+                // Escape all user-supplied strings before embedding in HTML
+                const safeContent = escapeHtml(trimmedContent);
+                const safeTaskName = escapeHtml(task.name);
+                const safeCompanyName = escapeHtml(task.client.companyName || 'A client');
+
                 if (isClient) {
                     // Client commented → email all admins with notifyComments enabled
                     const admins = await prisma.user.findMany({
@@ -139,11 +178,11 @@ export async function POST(req: Request, context: { params: Promise<{ id: string
                                 `New Comment on "${task.name}"`,
                                 `<h2 style="margin:0 0 6px;font-size:20px;font-weight:700;color:#111827;letter-spacing:-0.3px;">New Comment</h2>
                                  <p style="margin:0 0 24px;font-size:14px;color:#6b7280;line-height:1.6;">
-                                   <strong style="color:#374151;">${task.client.companyName || 'A client'}</strong> left a comment on task
-                                   <strong style="color:#374151;">${task.name}</strong>.
+                                   <strong style="color:#374151;">${safeCompanyName}</strong> left a comment on task
+                                   <strong style="color:#374151;">${safeTaskName}</strong>.
                                  </p>
                                  <div style="background:#f9fafb;border-left:3px solid #2e3845;border-radius:0 6px 6px 0;padding:14px 18px;margin-bottom:28px;">
-                                   <p style="margin:0;font-size:14px;color:#374151;line-height:1.7;white-space:pre-wrap;">${content}</p>
+                                   <p style="margin:0;font-size:14px;color:#374151;line-height:1.7;white-space:pre-wrap;">${safeContent}</p>
                                  </div>
                                  <a href="${APP_URL}/dashboard/tasks?taskId=${task.id}"
                                     style="display:inline-block;background:#2e3845;color:#ffffff;text-decoration:none;padding:11px 22px;border-radius:7px;font-size:13px;font-weight:600;letter-spacing:0.2px;">
@@ -164,10 +203,10 @@ export async function POST(req: Request, context: { params: Promise<{ id: string
                                 `<h2 style="margin:0 0 6px;font-size:20px;font-weight:700;color:#111827;letter-spacing:-0.3px;">New Reply from Nandann</h2>
                                  <p style="margin:0 0 24px;font-size:14px;color:#6b7280;line-height:1.6;">
                                    The Nandann team has replied to your task
-                                   <strong style="color:#374151;">${task.name}</strong>.
+                                   <strong style="color:#374151;">${safeTaskName}</strong>.
                                  </p>
                                  <div style="background:#f9fafb;border-left:3px solid #2e3845;border-radius:0 6px 6px 0;padding:14px 18px;margin-bottom:28px;">
-                                   <p style="margin:0;font-size:14px;color:#374151;line-height:1.7;white-space:pre-wrap;">${content}</p>
+                                   <p style="margin:0;font-size:14px;color:#374151;line-height:1.7;white-space:pre-wrap;">${safeContent}</p>
                                  </div>
                                  <a href="${APP_URL}/dashboard/tasks?taskId=${task.id}"
                                     style="display:inline-block;background:#2e3845;color:#ffffff;text-decoration:none;padding:11px 22px;border-radius:7px;font-size:13px;font-weight:600;letter-spacing:0.2px;">
@@ -184,6 +223,7 @@ export async function POST(req: Request, context: { params: Promise<{ id: string
 
         return NextResponse.json(comment, { status: 201 });
     } catch (error: any) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        console.error('POST /api/tasks/[id]/comments error', error);
+        return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }

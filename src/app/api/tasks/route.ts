@@ -1,16 +1,34 @@
 import { NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
 import prisma from '@/lib/db';
+import { checkCsrf, csrfError, auditLog } from '@/lib/security';
+
+const MAX_BODY_BYTES = 64 * 1_024;
 
 export async function POST(req: Request) {
+    // CSRF check
+    if (!checkCsrf(req)) return csrfError();
+
     try {
         const session = await getSession();
         if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
+        // Body size guard
+        const contentLength = Number(req.headers.get('content-length') ?? 0);
+        if (contentLength > MAX_BODY_BYTES) {
+            return NextResponse.json({ error: 'Request body too large' }, { status: 413 });
+        }
+
         const { clientId, name, description, isPriority } = await req.json();
 
-        if (!name) {
-            return NextResponse.json({ error: 'Name is required' }, { status: 400 });
+        if (!name || typeof name !== 'string' || name.trim().length === 0) {
+            return NextResponse.json({ error: 'Task name is required' }, { status: 400 });
+        }
+        if (name.length > 500) {
+            return NextResponse.json({ error: 'Task name must not exceed 500 characters' }, { status: 400 });
+        }
+        if (description !== undefined && typeof description === 'string' && description.length > 10_000) {
+            return NextResponse.json({ error: 'Description must not exceed 10 000 characters' }, { status: 400 });
         }
 
         let resolvedClientId = clientId;
@@ -33,14 +51,14 @@ export async function POST(req: Request) {
         const task = await prisma.task.create({
             data: {
                 clientId: resolvedClientId,
-                name,
+                name: name.trim(),
                 description,
                 isPriority: Boolean(isPriority),
                 status: 'PENDING',
             }
         });
 
-        // Trigger Real Notifications
+        // In-app notifications
         if (session.role === 'CLIENT') {
             const admins = await prisma.user.findMany({ where: { role: 'ADMIN' }, select: { id: true } });
             if (admins.length > 0) {
@@ -48,7 +66,7 @@ export async function POST(req: Request) {
                     data: admins.map(admin => ({
                         userId: admin.id,
                         type: 'TASK_CREATED',
-                        message: `New task from client: ${name}`,
+                        message: `New task from client: ${name.trim()}`,
                         link: '/dashboard/tasks'
                     }))
                 });
@@ -58,16 +76,16 @@ export async function POST(req: Request) {
                 data: {
                     userId: resolvedClientId,
                     type: 'TASK_CREATED',
-                    message: `New task assigned: ${name}`,
+                    message: `New task assigned: ${name.trim()}`,
                     link: '/dashboard'
                 }
             });
+            auditLog('TASK_CREATED', session.userId, { taskId: task.id, clientId: resolvedClientId });
         }
-
-        // TODO: Send email notification if needed
 
         return NextResponse.json(task, { status: 201 });
     } catch (error: any) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        console.error('POST /api/tasks error', error);
+        return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }

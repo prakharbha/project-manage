@@ -2,6 +2,12 @@ import { NextResponse } from 'next/server';
 import prisma from '@/lib/db';
 import crypto from 'crypto';
 import { Resend } from 'resend';
+import { checkRateLimit, getClientIp, tooManyRequestsResponse } from '@/lib/rateLimit';
+import { checkCsrf, csrfError } from '@/lib/security';
+
+// 3 reset emails per IP per hour
+const RATE_LIMIT = 3;
+const RATE_WINDOW_MS = 60 * 60 * 1_000;
 
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 const FROM = 'Nandann <noreply@nandann.com>';
@@ -47,7 +53,7 @@ function emailTemplate(title: string, bodyHtml: string) {
                   <td style="padding:18px 40px;border-top:1px solid #f0f0f0;background:#fafafa;">
                     <p style="margin:0;font-size:11px;color:#9ca3af;line-height:1.6;">
                       If you did not request a password reset, you can safely ignore this email.
-                      This link will expire in <strong>1 hour</strong>.
+                      This link will expire in <strong>30 minutes</strong>.
                     </p>
                   </td>
                 </tr>
@@ -64,6 +70,14 @@ function emailTemplate(title: string, bodyHtml: string) {
 }
 
 export async function POST(req: Request) {
+    // CSRF check
+    if (!checkCsrf(req)) return csrfError();
+
+    // Rate limit per IP
+    const ip = getClientIp(req);
+    const rl = checkRateLimit(`forgot-password:${ip}`, RATE_LIMIT, RATE_WINDOW_MS);
+    if (!rl.allowed) return tooManyRequestsResponse(rl.resetAt);
+
     try {
         const { email } = await req.json();
 
@@ -80,9 +94,9 @@ export async function POST(req: Request) {
             return NextResponse.json({ success: true });
         }
 
-        // Generate cryptographically secure token
+        // Invalidate any previous reset token, then issue a fresh one (30-min expiry)
         const resetToken = crypto.randomBytes(32).toString('hex');
-        const tokenExpiry = new Date(Date.now() + 1000 * 60 * 60); // 1 hour expiry
+        const tokenExpiry = new Date(Date.now() + 30 * 60 * 1_000); // 30 minutes
 
         await prisma.user.update({
             where: { email },
