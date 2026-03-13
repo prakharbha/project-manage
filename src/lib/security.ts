@@ -82,12 +82,16 @@ export function checkCsrf(req: Request): boolean {
             } catch { /* ignore malformed host */ }
         }
 
-        // ── Check 2: explicit env var override ──
-        const appUrl = process.env.NEXT_PUBLIC_APP_URL;
-        if (appUrl) {
+        // ── Check 2: explicit env var + known production origins ──
+        const staticAllowed = [
+            process.env.NEXT_PUBLIC_APP_URL,
+            'https://goal.nandann.com',
+        ].filter(Boolean) as string[];
+
+        for (const allowed of staticAllowed) {
             try {
-                if (new URL(appUrl).origin === incomingOrigin) return true;
-            } catch { /* ignore malformed env var */ }
+                if (new URL(allowed).origin === incomingOrigin) return true;
+            } catch { /* ignore malformed entry */ }
         }
 
         return false;
