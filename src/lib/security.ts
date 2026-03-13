@@ -55,36 +55,41 @@ export function validatePassword(password: string): PasswordValidationResult {
 // CSRF — Origin header validation
 // ---------------------------------------------------------------------------
 
-const ALLOWED_ORIGINS = new Set(
-    [
-        process.env.NEXT_PUBLIC_APP_URL,
-        'https://clients.nandann.com',
-        'http://localhost:3000',
-        'http://localhost:3001',
-    ].filter(Boolean) as string[]
-);
-
 /**
  * Returns true when the request may proceed, false when it should be blocked.
  *
- * Logic:
- *  • No Origin header → server-to-server or same-origin GET; allow.
- *  • Origin header present → must match one of the allowed origins.
+ * Strategy (in order):
+ *  1. No Origin header → server-to-server or same-origin request without CORS; allow.
+ *  2. Origin matches the request's own Host header (works on any deployment domain automatically).
+ *  3. Origin matches NEXT_PUBLIC_APP_URL env var (explicit override for reverse-proxy setups).
+ *  4. Otherwise → block (cross-origin request from an unknown domain).
  */
 export function checkCsrf(req: Request): boolean {
     const origin = req.headers.get('origin');
-    if (!origin) return true;  // server-to-server or same-origin (no origin header)
+    if (!origin) return true; // no origin header = same-origin or server-to-server
 
     try {
-        // Normalise to scheme + host only (strips path / query)
         const incomingOrigin = new URL(origin).origin;
-        for (const allowed of ALLOWED_ORIGINS) {
+
+        // ── Check 1: dynamic self-origin from Host header ──
+        // Handles any deployment URL automatically without needing env vars.
+        const host = req.headers.get('host');
+        if (host) {
+            // Respect x-forwarded-proto set by reverse proxies (Vercel, nginx, etc.)
+            const proto = req.headers.get('x-forwarded-proto')?.split(',')[0].trim() ?? 'https';
             try {
-                if (new URL(allowed).origin === incomingOrigin) return true;
-            } catch {
-                // skip malformed entries
-            }
+                if (new URL(`${proto}://${host}`).origin === incomingOrigin) return true;
+            } catch { /* ignore malformed host */ }
         }
+
+        // ── Check 2: explicit env var override ──
+        const appUrl = process.env.NEXT_PUBLIC_APP_URL;
+        if (appUrl) {
+            try {
+                if (new URL(appUrl).origin === incomingOrigin) return true;
+            } catch { /* ignore malformed env var */ }
+        }
+
         return false;
     } catch {
         return false;
